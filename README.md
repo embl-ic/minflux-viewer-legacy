@@ -1,24 +1,33 @@
 # MINFLUX Rotor tracking
- A MATLAB application with UI to provide visualization, processing, and analysis tools for MINFLUX data.
- It created in specific to support a user project, that is to tracking Rotor movement with labelled fluorescent molecule with MINFLUX microscopy.
 
 ## Description
-Let people know what your project can do specifically. Provide context and add a link to any reference visitors might be unfamiliar with. A list of Features or a Background subsection can also be added here. If there are alternatives to your project, this is a good place to list differentiating factors.
+A MATLAB application with UI to provide visualization, processing, and analysis tools for MINFLUX data.
+It is created in order to support a user project, that is to tracking Rotor movement with labelled fluorescent molecule with MINFLUX microscopy.
+
+
+## Prerequisite
+- MATLAB R2016a or later release
+- Fiji
+- MINFLUX raw data (.mat format and .msr format)
+- Abberior Inspector: optional
 
 
 ## How to use
 
-To make it easy for you to get started with GitLab, here's a list of recommended next steps.
-
+1. Clone / Download the main branch to a folder on disk;
+2. Right click on the script initApp.m, and Run. If in case there's no Run option, open it in MATLAB and run it. The main UI of the MINFLUX data plot application should appear.
+3. 
 Already a pro? Just edit this README.md and make it your own. Want to make it easy? [Use the template at the bottom](#editing-this-readme)!
+
 
 
 ## Debug and Error report
  In case of error or bugs, please contact <ziqiang.huang@embl.de>, or create a issue to this repo.
 
+## Version
+ v1.0: initial commit to EMBL gitlab
+
 
 ## Publication
 
 - Please upload data on public archives (such as [Bioimage archive](https://www.ebi.ac.uk/bioimage-archive/)) for publication purposes.
-- Please [acknowledge the CBA](https://git.embl.de/grp-cba/cba/-/blob/master/README.md#centre-for-bioimage-analysis-cba)
-
