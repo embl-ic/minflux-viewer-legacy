@@ -2,25 +2,26 @@ classdef MINFLUX_data_plot_trace_viewer < matlab.apps.AppBase
 
     % Properties that correspond to app components
     properties (Access = public)
-        UIFigure          matlab.ui.Figure
-        Panel_scatter     matlab.ui.container.Panel
-        headaverageLabel  matlab.ui.control.Label
-        headRangeSpinner  matlab.ui.control.Spinner
-        tailsizeLabel     matlab.ui.control.Label
-        tailRangeSpinner  matlab.ui.control.Spinner
-        ax_scatter        matlab.ui.control.UIAxes
-        Panel_timePlot    matlab.ui.container.Panel
-        playButton        matlab.ui.control.StateButton
-        timeSlider        matlab.ui.control.Slider
-        ax_efo            matlab.ui.control.UIAxes
-        ax_v              matlab.ui.control.UIAxes
-        ax_dt             matlab.ui.control.UIAxes
-        Panel_table       matlab.ui.container.Panel
-        OverlayButton     matlab.ui.control.Button
-        TileViewButton    matlab.ui.control.Button
-        tidLabel          matlab.ui.control.Label
-        tidDropDown       matlab.ui.control.DropDown
-        UITable           matlab.ui.control.Table
+        UIFigure            matlab.ui.Figure
+        Panel_scatter       matlab.ui.container.Panel
+        headaverageLabel    matlab.ui.control.Label
+        headRangeSpinner    matlab.ui.control.Spinner
+        tailsizeLabel       matlab.ui.control.Label
+        tailRangeSpinner    matlab.ui.control.Spinner
+        ax_scatter          matlab.ui.control.UIAxes
+        Panel_timePlot      matlab.ui.container.Panel
+        playButton          matlab.ui.control.StateButton
+        timeSlider          matlab.ui.control.Slider
+        ax_efo              matlab.ui.control.UIAxes
+        ax_v                matlab.ui.control.UIAxes
+        ax_dt               matlab.ui.control.UIAxes
+        Panel_table         matlab.ui.container.Panel
+        removetailCheckBox  matlab.ui.control.CheckBox
+        OverlayButton       matlab.ui.control.Button
+        TileViewButton      matlab.ui.control.Button
+        tidLabel            matlab.ui.control.Label
+        tidDropDown         matlab.ui.control.DropDown
+        UITable             matlab.ui.control.Table
     end
 
 
@@ -30,6 +31,7 @@ classdef MINFLUX_data_plot_trace_viewer < matlab.apps.AppBase
         data
         xyz
 
+        tid
         trace_ID
         trace_length
         trace_cfr
@@ -72,34 +74,39 @@ classdef MINFLUX_data_plot_trace_viewer < matlab.apps.AppBase
             app.data = getData(app.CallingApp);    % load main app data
             app.xyz = 1e9 * getLoc(app.CallingApp);      % load localization (after Z correction)
             
-            tid = app.data.tid;
+            app.tid = app.data.tid;
             
-            
-            app.trace_ID = unique(app.data.tid);
-            app.trace_length = arrayfun(@(x) sum(tid==x), app.trace_ID);
+            initData2(app);
+             
+        end
+        
+        function initData2 (app)
+            app.trace_ID = unique(app.tid);
+            app.trace_ID(app.trace_ID==0) = [];
+            app.trace_length = arrayfun(@(x) sum(app.tid==x), app.trace_ID);
             singleLoc = app.trace_length==1;
             
             %app.trace_cfr = arrayfun(@(x) mean(app.data.cfr(tid==x,:)), app.trace_ID);
-            app.trace_efo = arrayfun(@(x) mean(app.data.efo(tid==x,:)), app.trace_ID);
-            app.trace_dcr = arrayfun(@(x) mean(app.data.dcr(tid==x,:)), app.trace_ID);
+            app.trace_efo = arrayfun(@(x) mean(app.data.efo(app.tid==x,:)), app.trace_ID);
+            app.trace_dcr = arrayfun(@(x) mean(app.data.dcr(app.tid==x,:)), app.trace_ID);
             
 
             ch1_exist = false;
             if isfield(app.data, 'conf_ch1')
-                app.trace_ch1 = arrayfun(@(x) mean(app.data.conf_ch1(tid==x,:)), app.trace_ID);
+                app.trace_ch1 = arrayfun(@(x) mean(app.data.conf_ch1(app.tid==x,:)), app.trace_ID);
                 ch1_exist = true;
             end
             
             ch2_exist = false;
             if isfield(app.data, 'conf_ch2')
-                app.trace_ch2 = arrayfun(@(x) mean(app.data.conf_ch2(tid==x,:)), app.trace_ID);
+                app.trace_ch2 = arrayfun(@(x) mean(app.data.conf_ch2(app.tid==x,:)), app.trace_ID);
                 ch2_exist = true;
             end
 
-            app.trace_dt = arrayfun(@(x) 1e3* mean(app.data.dt(tid==x)), app.trace_ID);
-            app.trace_V = arrayfun(@(x) 1e6* nanmean(app.data.spd(tid==x)), app.trace_ID); %#ok<NANMEAN> 
+            app.trace_dt = arrayfun(@(x) 1e3* mean(app.data.dt(app.tid==x)), app.trace_ID);
+            app.trace_V = arrayfun(@(x) 1e6* nanmean(app.data.spd(app.tid==x)), app.trace_ID); %#ok<NANMEAN> 
             %app.trace_S = arrayfun(@(x) 1e6* sum(app.data.dst(tid==x)), app.trace_ID);
-            app.trace_size = arrayfun(@(x) vecnorm(range(app.xyz(tid==x,:))), app.trace_ID);
+            app.trace_size = arrayfun(@(x) vecnorm(range(app.xyz(app.tid==x,:))), app.trace_ID);
             
             app.trace_dt(singleLoc) = NaN;
             app.trace_size(singleLoc) = 0;
@@ -128,26 +135,18 @@ classdef MINFLUX_data_plot_trace_viewer < matlab.apps.AppBase
             %app.dataTableHeader = {'trace ID', 'N loc', 'cfr', 'efo', 'dcr', 'dt (ms)', 'velocity (um/s)', 'travel length (um)', 'size (nm)'};
             %app.dataTableHeader = {'trace ID', 'N loc', 'efo', 'ch1', 'ch2', 'dcr', 'dt (ms)', 'velocity (um/s)', 'size (nm)'};
             app.dataTable = sortrows(app.dataTable, 2, 'descend');
-            
         end
-        
         
         function initUI (app)
             if isempty(app.data)
                 return;
             end
 
-            %app.trace_ID = unique(app.data.tid);
-            %app.trace_length = arrayfun(@(x) sum(app.data.tid==x), app.trace_ID);
-
-            %test = arrayfun(@(x) num2str(x), app.trace_ID, 'UniformOutput', false);
             app.tidDropDown.Items = arrayfun(@(x) num2str(x), app.trace_ID, 'UniformOutput', false);
-            %app.tidDropDown.Items = app.trace_ID;
-
             selectedCell = app.dataTable(1, 1);
             app.selected_trace = selectedCell.Variables;
             app.tidDropDown.Value = num2str(app.selected_trace);
-            idx_selected = app.data.tid==app.selected_trace;
+            idx_selected = app.tid==app.selected_trace;
             app.tim_trace = app.data.tim(idx_selected);
             app.tim_trace = app.tim_trace - app.tim_trace(1);
             app.timeSlider.Limits = [1, numel(app.tim_trace)];
@@ -157,6 +156,7 @@ classdef MINFLUX_data_plot_trace_viewer < matlab.apps.AppBase
             
             % remove the 1st data point for time plots
             idx_selected(find(idx_selected, 1)) = 0;
+            cla(app.ax_scatter); cla(app.ax_dt); cla(app.ax_v); cla(app.ax_efo);
             app.scatterPlot = scatter3(app.ax_scatter, app.xyz_trace(:, 1), app.xyz_trace(:, 2), app.xyz_trace(:, 3), '.');
             app.ax_scatter.Title.String = strcat('tid: ', num2str(app.selected_trace));
             view(app.ax_scatter, 2);
@@ -213,7 +213,7 @@ classdef MINFLUX_data_plot_trace_viewer < matlab.apps.AppBase
         end
         
         function plotSelectedTrace (app)
-            idx_selected = app.data.tid==app.selected_trace;
+            idx_selected = app.tid==app.selected_trace;
             app.tim_trace = app.data.tim(idx_selected);
             app.tim_trace = app.tim_trace - app.tim_trace(1);
             app.xyz_trace = app.xyz(idx_selected, :);
@@ -224,7 +224,7 @@ classdef MINFLUX_data_plot_trace_viewer < matlab.apps.AppBase
             app.scatterPlot.YData = app.xyz_trace(:, 2);
             app.scatterPlot.ZData = app.xyz_trace(:, 3);            
             % update dt, V, S plot
-            if sum(idx_selected) <= 1
+            if sum(idx_selected) <= 1 % not enough data point
                 app.plot_dt.XData = 0;
                 app.plot_dt.YData = 0;
                 app.plot_v.XData = 0;
@@ -265,11 +265,11 @@ classdef MINFLUX_data_plot_trace_viewer < matlab.apps.AppBase
             %set(app.ax_scatter, 'NextPlot', 'add');
             figure; hold on;
             for i = 1 : numel(indices)
-                idx_selected = app.data.tid==indices(i);
+                idx_selected = app.tid==indices(i);
                 cor = app.xyz(idx_selected, :);
                 cor = cor - mean(cor);
                 sc = scatter3(cor(:, 1), cor(:, 2), cor(:, 3), '.');
-                sc.DataTipTemplate.DataTipRows(end+1) = dataTipTextRow("tid",  num2cell(app.data.tid(idx_selected)));
+                sc.DataTipTemplate.DataTipRows(end+1) = dataTipTextRow("tid",  num2cell(app.tid(idx_selected)));
             end
             xlabel('X (nm)'); ylabel('Y (nm)'); zlabel('Z (nm)');
             hold off;
@@ -337,7 +337,41 @@ classdef MINFLUX_data_plot_trace_viewer < matlab.apps.AppBase
                 mid = 0.5 * width;
             end   
         end
-
+        
+        function tid = removeTraceTail (app)
+            tid = [];
+            if isempty(app.data)
+                return;
+            end
+%             if isempty(app.tid) || isempty(app.trace_V)
+%                 initData(app);
+%                 initData2(app);
+%             end
+            tid = app.tid;
+            for i = 1 : numel(app.trace_ID)
+                idx_selected = tid==app.trace_ID(i);
+                first_idx = find(idx_selected, 1);
+                V_RMS = 1e6 * sqrt( movmean(app.data.spd(idx_selected).^2, 10) );
+                % first cut based on velocity
+                first_cut = find(diff(V_RMS)>0, 1);
+                if isempty(first_cut) 
+                    first_cut = 0; 
+                end
+                % second cut based on global distance to neighbours
+                loc = app.xyz(idx_selected, :);
+                D = mean(pdist2(loc, loc));
+                second_cut = find(D(first_cut+1:end)<20, 1);
+                if isempty(second_cut)
+                    second_cut = 0;
+                end
+                % remove tid for data inside cut range
+                final_cut = first_cut + second_cut;
+                if final_cut == 0
+                    continue;
+                end
+                tid(first_idx : first_idx + final_cut-1) = 0;
+            end
+        end
     end
 
 
@@ -465,7 +499,7 @@ classdef MINFLUX_data_plot_trace_viewer < matlab.apps.AppBase
             for i = trace_begin : trace_end
                 ax = subplot(nRow, nCol, idx_plot); idx_plot = idx_plot + 1;
                 trace_to_plot = app.UITable.DisplayData{i, 1};
-                idx_selected = app.data.tid==trace_to_plot;
+                idx_selected = app.tid==trace_to_plot;
                 loc = app.xyz(idx_selected, :);
                 loc = loc - mean(loc);
                 p = plot(ax, loc(:,1), loc(:,2), '.');
@@ -501,6 +535,18 @@ classdef MINFLUX_data_plot_trace_viewer < matlab.apps.AppBase
             % Delete the dialog box 
             delete(app)
             
+        end
+
+        % Value changed function: removetailCheckBox
+        function removetailCheckBoxValueChanged(app, event)
+            if app.removetailCheckBox.Value % remove the tail of each trace
+                app.tid = removeTraceTail(app);
+            else
+                app.tid = app.data.tid;
+            end
+            initData2(app);
+            app.UITable.Data = table2cell(app.dataTable);
+            plotSelectedTrace(app);
         end
     end
 
@@ -553,6 +599,12 @@ classdef MINFLUX_data_plot_trace_viewer < matlab.apps.AppBase
             app.OverlayButton.ButtonPushedFcn = createCallbackFcn(app, @OverlayButtonPushed, true);
             app.OverlayButton.Position = [9 108 102 25];
             app.OverlayButton.Text = 'Overlay';
+
+            % Create removetailCheckBox
+            app.removetailCheckBox = uicheckbox(app.Panel_table);
+            app.removetailCheckBox.ValueChangedFcn = createCallbackFcn(app, @removetailCheckBoxValueChanged, true);
+            app.removetailCheckBox.Text = 'remove tail';
+            app.removetailCheckBox.Position = [13 52 82 22];
 
             % Create Panel_timePlot
             app.Panel_timePlot = uipanel(app.UIFigure);

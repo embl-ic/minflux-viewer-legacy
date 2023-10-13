@@ -1313,6 +1313,9 @@ classdef MINFLUX_data_plot < matlab.apps.AppBase
 
         % Image clicked function: Image2
         function Image2Clicked(app, event)
+            if isempty(app.data)
+                return;
+            end
             app.TraceViewerApp = MINFLUX_data_plot_trace_viewer(app);
         end
 
@@ -1657,7 +1660,7 @@ classdef MINFLUX_data_plot < matlab.apps.AppBase
             app.Image.ScaleMethod = 'stretch';
             app.Image.ImageClickedFcn = createCallbackFcn(app, @ImageClicked, true);
             app.Image.Position = [1 -1 42 44];
-            app.Image.ImageSource = 'image_1.gif';
+            app.Image.ImageSource = 'image_1.png';
 
             % Create HistogramTab
             app.HistogramTab = uitab(app.TabGroup);
@@ -1751,7 +1754,7 @@ classdef MINFLUX_data_plot < matlab.apps.AppBase
             app.Image2.ScaleMethod = 'stretch';
             app.Image2.ImageClickedFcn = createCallbackFcn(app, @Image2Clicked, true);
             app.Image2.Position = [395 387 230 235];
-            app.Image2.ImageSource = 'image_2.gif';
+            app.Image2.ImageSource = 'image_2.png';
 
             % Show the figure after all components are created
             app.UIFigureMain.Visible = 'on';
