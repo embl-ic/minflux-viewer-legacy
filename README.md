@@ -17,7 +17,7 @@ It is created in order to support a user project, that is to tracking Rotor move
 1. Clone / Download the main branch to a folder on disk;
 2. Right click on the script initApp.m, and Run. If in case there's no Run option, open it in MATLAB and run it. The main UI of the MINFLUX data plot application should appear.
 3. 
-Already a pro? Just edit this README.md and make it your own. Want to make it easy? [Use the template at the bottom](#editing-this-readme)!
+
 
 
 
