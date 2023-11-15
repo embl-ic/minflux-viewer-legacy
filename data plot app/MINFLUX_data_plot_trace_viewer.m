@@ -12,10 +12,12 @@ classdef MINFLUX_data_plot_trace_viewer < matlab.apps.AppBase
         Panel_timePlot      matlab.ui.container.Panel
         playButton          matlab.ui.control.StateButton
         timeSlider          matlab.ui.control.Slider
+        ax_eco              matlab.ui.control.UIAxes
         ax_efo              matlab.ui.control.UIAxes
         ax_v                matlab.ui.control.UIAxes
         ax_dt               matlab.ui.control.UIAxes
         Panel_table         matlab.ui.container.Panel
+        ExportButton        matlab.ui.control.Button
         removetailCheckBox  matlab.ui.control.CheckBox
         OverlayButton       matlab.ui.control.Button
         TileViewButton      matlab.ui.control.Button
@@ -55,6 +57,7 @@ classdef MINFLUX_data_plot_trace_viewer < matlab.apps.AppBase
         scatterPlot
         plot_dt
         plot_v
+        plot_eco
         plot_efo
         
         vis_pos
@@ -64,7 +67,8 @@ classdef MINFLUX_data_plot_trace_viewer < matlab.apps.AppBase
         highlight_head
         bar_dt
         bar_v
-        bar_s
+        bar_eco
+        bar_efo
         
     end
     
@@ -156,7 +160,7 @@ classdef MINFLUX_data_plot_trace_viewer < matlab.apps.AppBase
             
             % remove the 1st data point for time plots
             idx_selected(find(idx_selected, 1)) = 0;
-            cla(app.ax_scatter); cla(app.ax_dt); cla(app.ax_v); cla(app.ax_efo);
+            cla(app.ax_scatter); cla(app.ax_dt); cla(app.ax_v); cla(app.ax_eco); cla(app.ax_efo);
             app.scatterPlot = scatter3(app.ax_scatter, app.xyz_trace(:, 1), app.xyz_trace(:, 2), app.xyz_trace(:, 3), '.');
             app.ax_scatter.Title.String = strcat('tid: ', num2str(app.selected_trace));
             view(app.ax_scatter, 2);
@@ -166,15 +170,17 @@ classdef MINFLUX_data_plot_trace_viewer < matlab.apps.AppBase
             
             velocity_rms = sqrt( movmean(app.data.spd(idx_selected).^2, 10) );
             app.plot_v = plot(app.ax_v, app.tim_trace(2:end), 1e6*velocity_rms);
+            app.plot_eco = plot(app.ax_eco, app.tim_trace(2:end), app.data.eco(idx_selected));
             app.plot_efo = plot(app.ax_efo, app.tim_trace(2:end), app.data.efo(idx_selected));
             
+            
             %axis(app.ax_dt, 'auto x');
-            ytickformat([app.ax_dt, app.ax_v, app.ax_efo], '#%5.1g');
+            ytickformat([app.ax_dt, app.ax_v, app.ax_eco, app.ax_efo], '#%5.1g');
             %app.ax_dt.PositionConstraint = "innerposition";
             %app.ax_v.PositionConstraint = "innerposition";
             %app.ax_efo.PositionConstraint = "innerposition";
             %linkprop([app.ax_dt, app.ax_v, app.ax_efo, app.timeSlider], 'InnerPosition');
-            linkaxes([app.ax_dt, app.ax_v, app.ax_efo, app.timeSlider], 'x');
+            linkaxes([app.ax_dt, app.ax_v, app.ax_eco, app.ax_efo, app.timeSlider], 'x');
             
             
             app.vis_pos = 1;
@@ -193,15 +199,19 @@ classdef MINFLUX_data_plot_trace_viewer < matlab.apps.AppBase
             
             set(app.ax_dt, 'NextPlot', 'add');
             set(app.ax_v, 'NextPlot', 'add');
+            set(app.ax_eco, 'NextPlot', 'add');
             set(app.ax_efo, 'NextPlot', 'add');
             app.bar_dt = bar(app.ax_dt, 0, app.ax_dt.YLim(2), 'BarWidth', 0, 'FaceColor', 'm', 'FaceAlpha', .6, 'EdgeColor', 'none');
             app.bar_dt.Visible = 'off';
             app.bar_v = bar(app.ax_v, 0, app.ax_v.YLim(2), 'BarWidth', 0, 'FaceColor', 'm', 'FaceAlpha', .6, 'EdgeColor', 'none');
             app.bar_v.Visible = 'off';
-            app.bar_s = bar(app.ax_efo, 0, app.ax_efo.YLim(2), 'BarWidth', 0, 'FaceColor', 'm', 'FaceAlpha', .6, 'EdgeColor', 'none');
-            app.bar_s.Visible = 'off';
+            app.bar_eco = bar(app.ax_eco, 0, app.ax_eco.YLim(2), 'BarWidth', 0, 'FaceColor', 'm', 'FaceAlpha', .6, 'EdgeColor', 'none');
+            app.bar_eco.Visible = 'off';
+            app.bar_efo = bar(app.ax_efo, 0, app.ax_efo.YLim(2), 'BarWidth', 0, 'FaceColor', 'm', 'FaceAlpha', .6, 'EdgeColor', 'none');
+            app.bar_efo.Visible = 'off';
             set(app.ax_dt, 'NextPlot', 'replaceChildren');
             set(app.ax_v, 'NextPlot', 'replaceChildren');
+            set(app.ax_eco, 'NextPlot', 'replaceChildren');
             set(app.ax_efo, 'NextPlot', 'replaceChildren');
             % populate table
             app.UITable.Data = table2cell(app.dataTable);
@@ -229,6 +239,8 @@ classdef MINFLUX_data_plot_trace_viewer < matlab.apps.AppBase
                 app.plot_dt.YData = 0;
                 app.plot_v.XData = 0;
                 app.plot_v.YData = 0;
+                app.plot_eco.XData = 0;
+                app.plot_eco.YData = 0;
                 app.plot_efo.XData = 0;
                 app.plot_efo.YData = 0;
                 app.ax_efo.XLim = [0, 1e-3];
@@ -239,6 +251,8 @@ classdef MINFLUX_data_plot_trace_viewer < matlab.apps.AppBase
                 app.plot_dt.YData = 1e3 * app.data.dt(idx_selected);
                 app.plot_v.XData = app.tim_trace(2:end);
                 app.plot_v.YData = 1e6 * sqrt( movmean(app.data.spd(idx_selected).^2, 10) );
+                app.plot_eco.XData = app.tim_trace(2:end);
+                app.plot_eco.YData = app.data.eco(idx_selected);
                 app.plot_efo.XData = app.tim_trace(2:end);
                 app.plot_efo.YData = app.data.efo(idx_selected);
                 app.ax_efo.XLim = [0, max(app.tim_trace)];
@@ -250,13 +264,15 @@ classdef MINFLUX_data_plot_trace_viewer < matlab.apps.AppBase
             app.highlight_head.Visible = 'off';
             app.bar_dt.Visible = 'off';
             app.bar_v.Visible = 'off';
-            app.bar_s.Visible = 'off';
+            app.bar_eco.Visible = 'off';
+            app.bar_efo.Visible = 'off';
             app.highlight_head.XData = 0;
             app.highlight_head.YData = 0;
             app.highlight_head.ZData = 0;
             app.bar_dt.XData = 1e-3; app.bar_dt.YData = app.ax_dt.YLim(2); app.bar_dt.BaseValue = app.ax_dt.YLim(1); app.bar_dt.BarWidth = 0;
             app.bar_v.XData = 1e-3; app.bar_v.YData = app.ax_v.YLim(2); app.bar_v.BaseValue = app.ax_v.YLim(1); app.bar_v.BarWidth = 0;
-            app.bar_s.XData = 1e-3; app.bar_s.YData = app.ax_efo.YLim(2); app.bar_s.BaseValue = app.ax_efo.YLim(1); app.bar_s.BarWidth = 0;
+            app.bar_eco.XData = 1e-3; app.bar_eco.YData = app.ax_eco.YLim(2); app.bar_eco.BaseValue = app.ax_eco.YLim(1); app.bar_eco.BarWidth = 0;
+            app.bar_efo.XData = 1e-3; app.bar_efo.YData = app.ax_efo.YLim(2); app.bar_efo.BaseValue = app.ax_efo.YLim(1); app.bar_efo.BarWidth = 0;
   
         end
         
@@ -288,14 +304,16 @@ classdef MINFLUX_data_plot_trace_viewer < matlab.apps.AppBase
                 app.highlight_head.Visible = 'off';
                 app.bar_dt.Visible = 'off';
                 app.bar_v.Visible = 'off';
-                app.bar_s.Visible = 'off';
+                app.bar_eco.Visible = 'off';
+                app.bar_efo.Visible = 'off';
                 return;
             else
                 app.highlight_trace.Visible = 'on';
                 app.highlight_head.Visible = 'on';
                 app.bar_dt.Visible = 'on';
                 app.bar_v.Visible = 'on';
-                app.bar_s.Visible = 'on';
+                app.bar_eco.Visible = 'on';
+                app.bar_efo.Visible = 'on';
             end
 
             
@@ -325,7 +343,8 @@ classdef MINFLUX_data_plot_trace_viewer < matlab.apps.AppBase
             % update displacement, velocity, and time interval plot bar
             app.bar_dt.XData = box_mid; app.bar_dt.BarWidth = box_width; %app.bar_dt.YData = app.ax_dt.YLim(2); 
             app.bar_v.XData = box_mid; app.bar_v.BarWidth = box_width; %app.bar_v.YData = app.ax_v.YLim(2); 
-            app.bar_s.XData = box_mid; app.bar_s.BarWidth = box_width; %app.bar_s.YData = app.ax_efo.YLim(2); 
+            app.bar_eco.XData = box_mid; app.bar_eco.BarWidth = box_width; %app.bar_v.YData = app.ax_v.YLim(2); 
+            app.bar_efo.XData = box_mid; app.bar_efo.BarWidth = box_width; %app.bar_s.YData = app.ax_efo.YLim(2); 
             
         end
         
@@ -372,6 +391,31 @@ classdef MINFLUX_data_plot_trace_viewer < matlab.apps.AppBase
                 tid(first_idx : first_idx + final_cut-1) = 0;
             end
         end
+
+        function exportTraceData (app, indices)
+            if isempty(indices)
+                return;
+            end
+            trace_data = struct();
+            for i = 1 : numel(indices)
+                % trace ID, loc, tim, efo, eco, dcr, ch1, ch2
+                trace_data(i).tid = indices(i);
+                idx = app.tid == trace_data(i).tid;
+                trace_data(i).loc = 1e-9 * app.xyz(idx, :);
+                trace_data(i).tim = app.data.tim(idx, :);
+                trace_data(i).efo = app.data.efo(idx, :);
+                trace_data(i).eco = app.data.eco(idx, :);
+                trace_data(i).dcr = app.data.dcr(idx, :);
+                if isfield(app.data, 'conf_ch1')
+                    trace_data(i).conf_ch1 = app.data.conf_ch1(idx, :);
+                end
+                if isfield(app.data, 'conf_ch2')
+                    trace_data(i).conf_ch2 = app.data.conf_ch2(idx, :);
+                end
+            end
+            assignin('base', 'exported_trace_data', trace_data);
+        end
+
     end
 
 
@@ -548,6 +592,18 @@ classdef MINFLUX_data_plot_trace_viewer < matlab.apps.AppBase
             app.UITable.Data = table2cell(app.dataTable);
             plotSelectedTrace(app);
         end
+
+        % Button pushed function: ExportButton
+        function ExportButtonPushed(app, event)
+            trace_ID_export = []; %#ok<NASGU> 
+            if numel(app.dataTableSelectedRow) <= 1
+                trace_ID_export = cell2mat(app.UITable.DisplayData(:, 1));
+            else
+                trace_ID_export = cell2mat(app.UITable.DisplayData(app.dataTableSelectedRow, 1));
+            end
+            % save trace data
+            exportTraceData(app, trace_ID_export);
+        end
     end
 
     % Component initialization
@@ -558,13 +614,13 @@ classdef MINFLUX_data_plot_trace_viewer < matlab.apps.AppBase
 
             % Create UIFigure and hide until all components are created
             app.UIFigure = uifigure('Visible', 'off');
-            app.UIFigure.Position = [600 100 892 708];
+            app.UIFigure.Position = [600 100 892 840];
             app.UIFigure.Name = 'Trace Viewer';
             app.UIFigure.CloseRequestFcn = createCallbackFcn(app, @DialogAppCloseRequest, true);
 
             % Create Panel_table
             app.Panel_table = uipanel(app.UIFigure);
-            app.Panel_table.Position = [9 7 872 244];
+            app.Panel_table.Position = [9 15 872 244];
 
             % Create UITable
             app.UITable = uitable(app.Panel_table);
@@ -604,26 +660,32 @@ classdef MINFLUX_data_plot_trace_viewer < matlab.apps.AppBase
             app.removetailCheckBox = uicheckbox(app.Panel_table);
             app.removetailCheckBox.ValueChangedFcn = createCallbackFcn(app, @removetailCheckBoxValueChanged, true);
             app.removetailCheckBox.Text = 'remove tail';
-            app.removetailCheckBox.Position = [13 52 82 22];
+            app.removetailCheckBox.Position = [13 69 82 22];
+
+            % Create ExportButton
+            app.ExportButton = uibutton(app.Panel_table, 'push');
+            app.ExportButton.ButtonPushedFcn = createCallbackFcn(app, @ExportButtonPushed, true);
+            app.ExportButton.Position = [9 28 102 23];
+            app.ExportButton.Text = 'Export';
 
             % Create Panel_timePlot
             app.Panel_timePlot = uipanel(app.UIFigure);
             app.Panel_timePlot.TitlePosition = 'centertop';
-            app.Panel_timePlot.Position = [409 259 472 442];
+            app.Panel_timePlot.Position = [409 268 472 565];
 
             % Create ax_dt
             app.ax_dt = uiaxes(app.Panel_timePlot);
             ylabel(app.ax_dt, 'dt (ms)')
             zlabel(app.ax_dt, 'Z')
             app.ax_dt.FontWeight = 'bold';
-            app.ax_dt.Position = [4 307 465 135];
+            app.ax_dt.Position = [4 429 465 135];
 
             % Create ax_v
             app.ax_v = uiaxes(app.Panel_timePlot);
             ylabel(app.ax_v, 'V (um/s)')
             zlabel(app.ax_v, 'Z')
             app.ax_v.FontWeight = 'bold';
-            app.ax_v.Position = [4 168 465 135];
+            app.ax_v.Position = [4 291 465 135];
 
             % Create ax_efo
             app.ax_efo = uiaxes(app.Panel_timePlot);
@@ -633,6 +695,13 @@ classdef MINFLUX_data_plot_trace_viewer < matlab.apps.AppBase
             app.ax_efo.FontWeight = 'bold';
             app.ax_efo.Position = [4 28 465 135];
 
+            % Create ax_eco
+            app.ax_eco = uiaxes(app.Panel_timePlot);
+            ylabel(app.ax_eco, 'eco')
+            zlabel(app.ax_eco, 'Z')
+            app.ax_eco.FontWeight = 'bold';
+            app.ax_eco.Position = [4 151 465 135];
+
             % Create timeSlider
             app.timeSlider = uislider(app.Panel_timePlot);
             app.timeSlider.Limits = [1 100];
@@ -640,7 +709,7 @@ classdef MINFLUX_data_plot_trace_viewer < matlab.apps.AppBase
             app.timeSlider.MajorTickLabels = {};
             app.timeSlider.ValueChangingFcn = createCallbackFcn(app, @timeSliderValueChanging, true);
             app.timeSlider.MinorTicks = [];
-            app.timeSlider.Position = [46 15 418 3];
+            app.timeSlider.Position = [46 9 418 3];
             app.timeSlider.Value = 1;
 
             % Create playButton
@@ -648,12 +717,12 @@ classdef MINFLUX_data_plot_trace_viewer < matlab.apps.AppBase
             app.playButton.ValueChangedFcn = createCallbackFcn(app, @playButtonValueChanged, true);
             app.playButton.IconAlignment = 'center';
             app.playButton.Text = '▷';
-            app.playButton.Position = [9 10 20 20];
+            app.playButton.Position = [9 4 20 20];
 
             % Create Panel_scatter
             app.Panel_scatter = uipanel(app.UIFigure);
             app.Panel_scatter.TitlePosition = 'centertop';
-            app.Panel_scatter.Position = [9 258 393 443];
+            app.Panel_scatter.Position = [9 272 393 561];
 
             % Create ax_scatter
             app.ax_scatter = uiaxes(app.Panel_scatter);
@@ -662,31 +731,31 @@ classdef MINFLUX_data_plot_trace_viewer < matlab.apps.AppBase
             ylabel(app.ax_scatter, 'Y (nm)')
             zlabel(app.ax_scatter, 'Z (nm)')
             app.ax_scatter.FontWeight = 'bold';
-            app.ax_scatter.Position = [2 53 385 385];
+            app.ax_scatter.Position = [2 57 385 499];
 
             % Create tailRangeSpinner
             app.tailRangeSpinner = uispinner(app.Panel_scatter);
             app.tailRangeSpinner.ValueChangingFcn = createCallbackFcn(app, @tailRangeSpinnerValueChanging, true);
             app.tailRangeSpinner.Limits = [0 Inf];
-            app.tailRangeSpinner.Position = [310 7 75 22];
+            app.tailRangeSpinner.Position = [281 15 75 22];
 
             % Create tailsizeLabel
             app.tailsizeLabel = uilabel(app.Panel_scatter);
             app.tailsizeLabel.HorizontalAlignment = 'right';
-            app.tailsizeLabel.Position = [260 7 46 22];
+            app.tailsizeLabel.Position = [231 15 46 22];
             app.tailsizeLabel.Text = 'tail size';
 
             % Create headRangeSpinner
             app.headRangeSpinner = uispinner(app.Panel_scatter);
             app.headRangeSpinner.ValueChangingFcn = createCallbackFcn(app, @headRangeSpinnerValueChanging, true);
             app.headRangeSpinner.Limits = [0 Inf];
-            app.headRangeSpinner.Position = [165 7 75 22];
+            app.headRangeSpinner.Position = [136 15 75 22];
             app.headRangeSpinner.Value = 2;
 
             % Create headaverageLabel
             app.headaverageLabel = uilabel(app.Panel_scatter);
             app.headaverageLabel.HorizontalAlignment = 'right';
-            app.headaverageLabel.Position = [71 10 89 22];
+            app.headaverageLabel.Position = [42 18 89 22];
             app.headaverageLabel.Text = 'head average ±';
 
             % Show the figure after all components are created
