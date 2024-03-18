@@ -1,8 +1,8 @@
-# MINFLUX Rotor tracking
+# MINFLUX data Viewer
 
 ## Description
 A MATLAB application with UI to provide visualization, processing, and analysis tools for MINFLUX data.
-It is created in order to support a user project, that is to tracking Rotor movement with labelled fluorescent molecule with MINFLUX microscopy.
+It is initially created in order to support a user project, which is to tracking Rotor movement with labelled fluorescent molecule with MINFLUX microscopy.
 
 
 ## Prerequisite
