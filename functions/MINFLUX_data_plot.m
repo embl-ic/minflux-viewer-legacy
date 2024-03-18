@@ -6,21 +6,25 @@ classdef MINFLUX_data_plot < matlab.apps.AppBase
         GridLayout                  matlab.ui.container.GridLayout
         LeftPanel                   matlab.ui.container.Panel
         filterPanel                 matlab.ui.container.Panel
+        loadFilterButton            matlab.ui.control.Button
+        saveFilterButton            matlab.ui.control.Button
         UITableFilter               matlab.ui.control.Table
         addFilterButton             matlab.ui.control.Button
         deleteFilterButton          matlab.ui.control.Button
         displayFilterButton         matlab.ui.control.Button
         DataLabel                   matlab.ui.control.Label
         PanelData                   matlab.ui.container.Panel
-        LoadConfocalButton          matlab.ui.control.Button
         TextArea                    matlab.ui.control.TextArea
         LoadDataButton              matlab.ui.control.Button
+        LoadConfocalButton          matlab.ui.control.Button
+        SaveDataButton              matlab.ui.control.Button
         PanelVisualization          matlab.ui.container.Panel
         attributeDropDown_1         matlab.ui.control.DropDown
         attributeDropDown_2         matlab.ui.control.DropDown
         attributeDropDown_2Label    matlab.ui.control.Label
         attributeDropDownLabel      matlab.ui.control.Label
         PanelScatter                matlab.ui.container.Panel
+        LocPrecButton               matlab.ui.control.Button
         ROIshapeDropDown            matlab.ui.control.DropDown
         ROIcolorButton              matlab.ui.control.Button
         ROIButton_scatter           matlab.ui.control.Button
@@ -1120,6 +1124,35 @@ classdef MINFLUX_data_plot < matlab.apps.AppBase
             end
         end
 
+        % Button pushed function: SaveDataButton
+        function SaveDataButtonPushed(app, event)
+            data_ori = load(fullfile(app.path, app.file), '-mat');
+            if ~isfield(data_ori, 'vld')
+                return;
+            end
+            [save_file, save_path, indx] = uiputfile(fullfile(app.path, strcat('processed_', app.file)), 'File Selection');
+            if indx == 0
+                return;
+            end
+            idx = find(data_ori.vld);
+            idx = idx(app.ftr);
+            vld_new = false(size(data_ori.vld));
+            vld_new(idx) = true;
+            data_ori.vld = vld_new;
+            
+            zscale = app.zscaleEditField.Value;
+            if isfield(data_ori, 'loc')
+                data_ori.loc(:, :, 3) = data_ori.loc(:, :, 3) * zscale;
+            elseif isfield(data_ori.itr, 'loc')
+                data_ori.itr.loc(:, :, 3) = data_ori.itr.loc(:, :, 3) * zscale;
+            else % no 'loc' detected!
+                % warning(' loc attribute not found in data! ');
+            end
+
+            save(fullfile(save_path, save_file), '-struct', 'data_ori', '-v7.3');
+
+        end
+
         % Cell selection callback: UITableFilter
         function UITableFilterCellSelection(app, event)
             app.filter_idx_selected = event.Indices(:, 1);
@@ -1161,6 +1194,16 @@ classdef MINFLUX_data_plot < matlab.apps.AppBase
             applyFilter(app);
         end
 
+        % Button pushed function: loadFilterButton
+        function loadFilterButtonPushed(app, event)
+            loadFilterFromJson(app);
+        end
+
+        % Button pushed function: saveFilterButton
+        function saveFilterButtonPushed(app, event)
+            saveFilterToJson(app);                         
+        end
+        
         % Button pushed function: addFilterButton
         function addFilterButtonPushed(app, event)
             % switch tab to Histogram, sync val_2, and val_hist
@@ -1268,11 +1311,15 @@ classdef MINFLUX_data_plot < matlab.apps.AppBase
             app.zScale = app.zscaleEditField.Value;
             app.zScaleAutoCheckBox.Value = false;     % not neccessary
             app.xyz(:, 3) = app.data.loc_z * app.zScale;
+
             try
-                app.scatterPlot.ZData = app.xyz(:,3);
-                app.scatterPlot_roi.ZData = app.xyz(app.index_roi, 3);
+                app.scatterPlot.ZData = app.xyz(app.ftr, 3);
             catch ME
                 error(" line 870: Failed to update scatter Plot ROI!");
+            end
+            % apply filter to ROI if there's any
+            if any(app.index_roi)
+                plotSelected(app, app.index_roi & app.ftr);
             end
         end
 
@@ -1293,11 +1340,22 @@ classdef MINFLUX_data_plot < matlab.apps.AppBase
             app.zscaleEditField.Value = app.zScale;
             app.xyz(:, 3) = app.data.loc_z * app.zScale;
             try
-                app.scatterPlot.ZData = app.xyz(:,3);
-                app.scatterPlot_roi.ZData = app.xyz(app.index_roi, 3);
+                app.scatterPlot.ZData = app.xyz(app.ftr, 3);
+                %app.scatterPlot_roi.ZData = app.xyz(app.index_roi && app.ftr, 3);
+                %app.scatterPlot.ZData = app.scatterPlot.ZData * app.zScale;
+                %app.scatterPlot_roi.ZData = app.scatterPlot_roi.ZData * app.zScale;
             catch ME
                 error(" line 894: Failed to update scatter Plot!");
             end
+            % apply filter to ROI if there's any
+            if any(app.index_roi)
+                plotSelected(app, app.index_roi & app.ftr);
+            end
+        end
+
+        % Button pushed function: LocPrecButton
+        function LocPrecButtonPushed(app, event)
+            computeLocPrecision(app);
         end
 
         % Image clicked function: Image
@@ -1459,19 +1517,19 @@ classdef MINFLUX_data_plot < matlab.apps.AppBase
             % Create scatterPlotButton
             app.scatterPlotButton = uibutton(app.PanelScatter, 'push');
             app.scatterPlotButton.ButtonPushedFcn = createCallbackFcn(app, @ScatterPlotButtonPushed, true);
-            app.scatterPlotButton.Position = [24 44 109 56];
+            app.scatterPlotButton.Position = [14 44 109 56];
             app.scatterPlotButton.Text = 'View Localization';
 
             % Create zScaleAutoCheckBox
             app.zScaleAutoCheckBox = uicheckbox(app.PanelScatter);
             app.zScaleAutoCheckBox.ValueChangedFcn = createCallbackFcn(app, @zScaleAutoCheckBoxValueChanged, true);
             app.zScaleAutoCheckBox.Text = 'auto';
-            app.zScaleAutoCheckBox.Position = [192 112 46 22];
+            app.zScaleAutoCheckBox.Position = [184 112 46 22];
 
             % Create ZscaleEditFieldLabel
             app.ZscaleEditFieldLabel = uilabel(app.PanelScatter);
             app.ZscaleEditFieldLabel.HorizontalAlignment = 'right';
-            app.ZscaleEditFieldLabel.Position = [22 113 45 22];
+            app.ZscaleEditFieldLabel.Position = [15 113 45 22];
             app.ZscaleEditFieldLabel.Text = 'Z scale';
 
             % Create zscaleEditField
@@ -1479,52 +1537,58 @@ classdef MINFLUX_data_plot < matlab.apps.AppBase
             app.zscaleEditField.Limits = [0 Inf];
             app.zscaleEditField.ValueDisplayFormat = '%.3f';
             app.zscaleEditField.ValueChangedFcn = createCallbackFcn(app, @zscaleEditFieldValueChanged, true);
-            app.zscaleEditField.Position = [82 113 89 22];
+            app.zscaleEditField.Position = [75 113 89 22];
             app.zscaleEditField.Value = 1;
 
             % Create colorbyDropDownLabel
             app.colorbyDropDownLabel = uilabel(app.PanelScatter);
             app.colorbyDropDownLabel.HorizontalAlignment = 'right';
-            app.colorbyDropDownLabel.Position = [140 77 59 22];
+            app.colorbyDropDownLabel.Position = [138 75 59 22];
             app.colorbyDropDownLabel.Text = 'color by';
 
             % Create colorByAttributeDropDown_3
             app.colorByAttributeDropDown_3 = uidropdown(app.PanelScatter);
             app.colorByAttributeDropDown_3.Items = {};
             app.colorByAttributeDropDown_3.ValueChangedFcn = createCallbackFcn(app, @colorByAttributeDropDownValueChanged, true);
-            app.colorByAttributeDropDown_3.Position = [208 77 86 22];
+            app.colorByAttributeDropDown_3.Position = [206 75 105 22];
             app.colorByAttributeDropDown_3.Value = {};
 
             % Create colormapDropDownLabel
             app.colormapDropDownLabel = uilabel(app.PanelScatter);
             app.colormapDropDownLabel.HorizontalAlignment = 'right';
-            app.colormapDropDownLabel.Position = [139 44 60 22];
+            app.colormapDropDownLabel.Position = [137 42 60 22];
             app.colormapDropDownLabel.Text = 'color map';
 
             % Create colormapDropDown
             app.colormapDropDown = uidropdown(app.PanelScatter);
             app.colormapDropDown.Items = {'default', 'glasbey', 'parula', 'hsv', 'hot', 'gray', 'bone', 'copper', 'pink', 'white', 'flag', 'lines', 'colorcube', 'vga', 'jet', 'prism', 'cool', 'autumn', 'spring', 'winter', 'summer'};
             app.colormapDropDown.ValueChangedFcn = createCallbackFcn(app, @colormapDropDownValueChanged, true);
-            app.colormapDropDown.Position = [208 44 86 22];
+            app.colormapDropDown.Position = [206 42 104 22];
             app.colormapDropDown.Value = 'default';
 
             % Create ROIButton_scatter
             app.ROIButton_scatter = uibutton(app.PanelScatter, 'push');
             app.ROIButton_scatter.ButtonPushedFcn = createCallbackFcn(app, @ROIButtonPushed, true);
-            app.ROIButton_scatter.Position = [24 8 61 23];
+            app.ROIButton_scatter.Position = [14 8 61 23];
             app.ROIButton_scatter.Text = 'ROI';
 
             % Create ROIcolorButton
             app.ROIcolorButton = uibutton(app.PanelScatter, 'push');
             app.ROIcolorButton.ButtonPushedFcn = createCallbackFcn(app, @ROIcolorButtonPushed, true);
-            app.ROIcolorButton.Position = [219 8 70 23];
+            app.ROIcolorButton.Position = [231 8 70 23];
             app.ROIcolorButton.Text = 'ROI color';
 
             % Create ROIshapeDropDown
             app.ROIshapeDropDown = uidropdown(app.PanelScatter);
             app.ROIshapeDropDown.Items = {'Box', 'Oval', 'Polygon', 'Freehand'};
-            app.ROIshapeDropDown.Position = [94 8 105 23];
+            app.ROIshapeDropDown.Position = [100 8 105 23];
             app.ROIshapeDropDown.Value = 'Box';
+
+            % Create LocPrecButton
+            app.LocPrecButton = uibutton(app.PanelScatter, 'push');
+            app.LocPrecButton.ButtonPushedFcn = createCallbackFcn(app, @LocPrecButtonPushed, true);
+            app.LocPrecButton.Position = [238 111 68 24];
+            app.LocPrecButton.Text = 'LocPrec';
 
             % Create PanelVisualization
             app.PanelVisualization = uipanel(app.LeftPanel);
@@ -1564,13 +1628,7 @@ classdef MINFLUX_data_plot < matlab.apps.AppBase
             app.PanelData.TitlePosition = 'centertop';
             app.PanelData.Title = 'data selection';
             app.PanelData.Position = [7 483 325 171];
-
-            % Create LoadDataButton
-            app.LoadDataButton = uibutton(app.PanelData, 'push');
-            app.LoadDataButton.ButtonPushedFcn = createCallbackFcn(app, @LoadDataButtonPushed, true);
-            app.LoadDataButton.Position = [4 111 61 35];
-            app.LoadDataButton.Text = {'Load'; 'Data'};
-
+            
             % Create TextArea
             app.TextArea = uitextarea(app.PanelData);
             app.TextArea.Editable = 'off';
@@ -1578,12 +1636,25 @@ classdef MINFLUX_data_plot < matlab.apps.AppBase
             app.TextArea.Position = [70 8 253 140];
             app.TextArea.Value = {'MINFLUX data (.mat) path'};
 
+            % Create LoadDataButton
+            app.LoadDataButton = uibutton(app.PanelData, 'push');
+            app.LoadDataButton.ButtonPushedFcn = createCallbackFcn(app, @LoadDataButtonPushed, true);
+            app.LoadDataButton.Position = [4 111 61 34];
+            app.LoadDataButton.Text = {'Load'; 'Data'};
+
             % Create LoadConfocalButton
             app.LoadConfocalButton = uibutton(app.PanelData, 'push');
             app.LoadConfocalButton.ButtonPushedFcn = createCallbackFcn(app, @LoadConfocalButtonPushed, true);
             app.LoadConfocalButton.WordWrap = 'on';
-            app.LoadConfocalButton.Position = [4 11 62 34];
+            app.LoadConfocalButton.Position = [4 61 61 34];
             app.LoadConfocalButton.Text = 'Load Confocal';
+            
+            % Create SaveDataButton
+            app.SaveDataButton = uibutton(app.PanelData, 'push');
+            app.SaveDataButton.ButtonPushedFcn = createCallbackFcn(app, @SaveDataButtonPushed, true);
+            app.SaveDataButton.WordWrap = 'on';
+            app.SaveDataButton.Position = [4 11 61 34];
+            app.SaveDataButton.Text = 'Save Data';
 
             % Create DataLabel
             app.DataLabel = uilabel(app.LeftPanel);
@@ -1602,19 +1673,19 @@ classdef MINFLUX_data_plot < matlab.apps.AppBase
             % Create displayFilterButton
             app.displayFilterButton = uibutton(app.filterPanel, 'push');
             app.displayFilterButton.ButtonPushedFcn = createCallbackFcn(app, @displayFilterButtonPushed, true);
-            app.displayFilterButton.Position = [240 6 63 23];
+            app.displayFilterButton.Position = [157 6 63 23];
             app.displayFilterButton.Text = 'display';
 
             % Create deleteFilterButton
             app.deleteFilterButton = uibutton(app.filterPanel, 'push');
             app.deleteFilterButton.ButtonPushedFcn = createCallbackFcn(app, @deleteFilterButtonPushed, true);
-            app.deleteFilterButton.Position = [93 7 20 20];
+            app.deleteFilterButton.Position = [123 7 20 20];
             app.deleteFilterButton.Text = '-';
 
             % Create addFilterButton
             app.addFilterButton = uibutton(app.filterPanel, 'push');
             app.addFilterButton.ButtonPushedFcn = createCallbackFcn(app, @addFilterButtonPushed, true);
-            app.addFilterButton.Position = [26 7 20 20];
+            app.addFilterButton.Position = [88 7 20 20];
             app.addFilterButton.Text = {'+'; ''};
 
             % Create UITableFilter
@@ -1628,6 +1699,18 @@ classdef MINFLUX_data_plot < matlab.apps.AppBase
             app.UITableFilter.CellSelectionCallback = createCallbackFcn(app, @UITableFilterCellSelection, true);
             app.UITableFilter.Multiselect = 'off';
             app.UITableFilter.Position = [2 37 322 169];
+
+            % Create saveFilterButton
+            app.saveFilterButton = uibutton(app.filterPanel, 'push');
+            app.saveFilterButton.ButtonPushedFcn = createCallbackFcn(app, @saveFilterButtonPushed, true);
+            app.saveFilterButton.Position = [262 6 48 23];
+            app.saveFilterButton.Text = 'save';
+
+            % Create loadFilterButton
+            app.loadFilterButton = uibutton(app.filterPanel, 'push');
+            app.loadFilterButton.ButtonPushedFcn = createCallbackFcn(app, @loadFilterButtonPushed, true);
+            app.loadFilterButton.Position = [6 6 48 23];
+            app.loadFilterButton.Text = 'load';
 
             % Create RightPanel
             app.RightPanel = uipanel(app.GridLayout);

@@ -31,6 +31,8 @@ function updateHistPlot (app, minVal, maxVal)
     else
         app.histPlot = histogram(app.UIAxes_histogram, app.val_hist);
     end
+    xlabel(app.UIAxes_histogram, strcat(app.histAttributeDropDown_4.Value, {' : '}, app.plotVarDropDown.Value));
+    
     app.histPlot.BinMethod = 'auto';
     app.UIAxes_histogram.YLimMode = 'auto';
     %app.axes_histogram.XLimMode = 'auto';

@@ -58,7 +58,9 @@ classdef MINFLUX_data_plot_trace_viewer < matlab.apps.AppBase
         plot_dt
         plot_v
         plot_eco
+        plot_eco_rms
         plot_efo
+        plot_efo_rms
         
         vis_pos
         vis_rng
@@ -170,9 +172,18 @@ classdef MINFLUX_data_plot_trace_viewer < matlab.apps.AppBase
             
             velocity_rms = sqrt( movmean(app.data.spd(idx_selected).^2, 10) );
             app.plot_v = plot(app.ax_v, app.tim_trace(2:end), 1e6*velocity_rms);
-            app.plot_eco = plot(app.ax_eco, app.tim_trace(2:end), app.data.eco(idx_selected));
-            app.plot_efo = plot(app.ax_efo, app.tim_trace(2:end), app.data.efo(idx_selected));
             
+            set(app.ax_eco, 'NextPlot', 'add');
+            eco_rms = sqrt( movmean(app.data.eco(idx_selected).^2, 50) );
+            app.plot_eco = plot(app.ax_eco, app.tim_trace(2:end), app.data.eco(idx_selected));
+            app.plot_eco_rms = plot(app.ax_eco, app.tim_trace(2:end), eco_rms, 'r', 'LineWidth', 2);
+            
+            set(app.ax_efo, 'NextPlot', 'add');
+            eco_mean = mean(app.data.eco(idx_selected)); eco_std = std(single(app.data.eco(idx_selected)), 1);
+            efo_mean = mean(app.data.efo(idx_selected)); efo_std = std(app.data.efo(idx_selected), 1);
+            efo_rms = (eco_rms - eco_mean) * efo_std / eco_std + efo_mean;
+            app.plot_efo = plot(app.ax_efo, app.tim_trace(2:end), app.data.efo(idx_selected));
+            app.plot_efo_rms = plot(app.ax_efo, app.tim_trace(2:end), efo_rms, 'r', 'LineWidth', 2);
             
             %axis(app.ax_dt, 'auto x');
             ytickformat([app.ax_dt, app.ax_v, app.ax_eco, app.ax_efo], '#%5.1g');
@@ -241,8 +252,12 @@ classdef MINFLUX_data_plot_trace_viewer < matlab.apps.AppBase
                 app.plot_v.YData = 0;
                 app.plot_eco.XData = 0;
                 app.plot_eco.YData = 0;
+                app.plot_eco_rms.XData = 0;
+                app.plot_eco_rms.YData = 0;
                 app.plot_efo.XData = 0;
                 app.plot_efo.YData = 0;
+                app.plot_efo_rms.XData = 0;
+                app.plot_efo_rms.YData = 0;
                 app.ax_efo.XLim = [0, 1e-3];
                 app.timeSlider.Limits = [1, 1];
             else
@@ -253,8 +268,19 @@ classdef MINFLUX_data_plot_trace_viewer < matlab.apps.AppBase
                 app.plot_v.YData = 1e6 * sqrt( movmean(app.data.spd(idx_selected).^2, 10) );
                 app.plot_eco.XData = app.tim_trace(2:end);
                 app.plot_eco.YData = app.data.eco(idx_selected);
+                app.plot_eco_rms.XData = app.tim_trace(2:end);
+                eco_rms = sqrt( movmean(app.data.eco(idx_selected).^2, 50) );
+                app.plot_eco_rms.YData = eco_rms;
+
                 app.plot_efo.XData = app.tim_trace(2:end);
                 app.plot_efo.YData = app.data.efo(idx_selected);
+                
+                eco_mean = mean(app.data.eco(idx_selected)); eco_std = std(single(app.data.eco(idx_selected)), 1);
+                efo_mean = mean(app.data.efo(idx_selected)); efo_std = std(app.data.efo(idx_selected), 1);
+
+                app.plot_efo_rms.XData = app.tim_trace(2:end);
+                app.plot_efo_rms.YData = (eco_rms - eco_mean) * efo_std / eco_std + efo_mean;
+
                 app.ax_efo.XLim = [0, max(app.tim_trace)];
                 app.timeSlider.Limits = [1, numel(app.tim_trace)];
             end

@@ -1,6 +1,7 @@
 function addExtraAttr (app)
     % 1-based iteration
-    app.data.itr = int8(1 + app.data.itr(app.data.vld, :));
+    %app.data.itr = int8(1 + app.data.itr(app.data.vld, :));
+    app.data.itr = int8(1 + app.data.itr);
     % locate trace change index in raw data
     tim = app.data.tim;
     tid = app.data.tid;
