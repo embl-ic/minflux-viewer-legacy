@@ -27,8 +27,11 @@ It is initially created in order to support a user project, which is to tracking
  In case of error or bugs, please contact <ziqiang.huang@embl.de>, or create a issue to this repo.
 
 ## Version
- v1.0: initial commit to EMBL gitlab
+ v1.0: 2023.10.12   initial commit to EMBL gitlab
+ v1.1: 2024.03.25   new function added: filter import/export; parser of new Abberior data format
 
+## Known issues
+ - histogram plot sometimes won't update correctly, with attribute has single constant value, or most identical values.
 
 ## Publication
 
