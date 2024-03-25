@@ -24,6 +24,10 @@
 # 1. Select the "zarr" folder that copied together with the parent raw data folder (very important)
 # 2. The script will convert raw data together with reference point data to MATLAB data file
 # 3. The MATLAB data file will be with the same hierarchy as the zarr file
+#
+# <Ziqiang.Huang@embl.de>
+# date: 2024.03.25
+
 
 import os
 import tkinter.filedialog as fd
