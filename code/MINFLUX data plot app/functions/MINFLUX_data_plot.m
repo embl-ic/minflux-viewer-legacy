@@ -1000,7 +1000,7 @@ classdef MINFLUX_data_plot < matlab.apps.AppBase
             app.firstLoad = isempty(app.data);  % check whether it's the 1st loaded dataset
             resetData(app);
             loadMinfluxData(app);
-            if (isempty(app.data) || ~isfield(app.data, 'loc_x'))
+            if (isempty(app.data) || ~isfield(app.data, 'tid'))
                 delete app.data;
                 return;
             end

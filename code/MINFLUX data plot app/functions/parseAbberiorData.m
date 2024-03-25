@@ -1,0 +1,189 @@
+%% Automatic parse Abberior MINLFUX data from MATLAB data format
+%   Because of the changes and updates introduced by Abberior on the data
+%   format and organization, it is neccessary to have a generic data parser
+%   that extract faithfully the value of attributes.
+%
+%   This parser script first flatten the data struct, so there's no sub-struct
+%   data within the flattened data.
+%
+%   It then retrives the number of localization, and number of iterations: 
+%   nLoc, nItr.
+%
+%   For different attribute, extract the meaningful value from different
+%   iterations:
+%   - for most attribute, value are taken from the last iteration;
+%   - for 'cfr', 'efc', value are taken from the effective iteration;
+%   - for 'loc', 'lnc', 'ext', value consist of x,y,z coordinates;
+%   - for 2024.02.19 Aberrior update, not all iteration are exported.
+%
+%   <Ziqiang.Huang@embl.de>
+%   date: 2024.03.19
+%%
+
+
+function parseAbberiorData (app)
+    if isempty(app.data)
+        return;
+    end
+    value = {}; name = {};
+
+    % get flattened copy of data
+    attrNames = fieldnames(app.data);
+    for i = 1 : numel(attrNames)
+        [value, name] = flatten (app.data, attrNames{i}, value, name);
+    end
+    data_flat = cell2struct(value, name);
+
+
+    % get number of loc, itr, and dimension order of attributes
+    [app.nLoc, app.nItr, dim_sorted] = getDimension (data_flat);
+    if isempty(app.nLoc) || isempty(app.nItr)
+        error('number of localization and/or iteration wrong!');
+    end
+    
+
+    % get value from the corresponding iteration
+    split_xyz = true;
+    app.data = getAttrValue (value, name, app.nLoc, app.nItr, dim_sorted, split_xyz);
+    
+end
+
+
+    function [value, name] = flatten (data_struct, fieldname, value, name)
+        %value = {}; name = {};
+        if any(ismember(name, fieldname))
+            return
+        end
+        if isstruct(data_struct.(fieldname))
+            sub_names = fieldnames(data_struct.(fieldname));
+            for i = 1 : numel(sub_names)
+                [value, name] = flatten(data_struct.(fieldname), sub_names{i}, value, name);
+            end
+        else
+            value =  vertcat(value, data_struct.(fieldname));
+            name = vertcat(name, fieldname);
+        end
+    end
+
+
+    function [nLoc, nItr, dim_sorted] = getDimension (data)
+        nLoc = [];   nItr = [];
+        if isempty(data)
+            return;
+        end
+        % minimum number of localization expected: 100
+        % maximum number of iteration expected: 50
+        minLocNum = 100;    maxItrNum = 50;
+        % get dimensions of each attribute
+        dim(:, 1) = structfun(@(x) size(x, 1), data);
+        dim(:, 2) = structfun(@(x) size(x, 2), data);
+        dim(:, 3) = structfun(@(x) size(x, 3), data);
+        % sort each attribute with descending dimensions
+        [dim_sorted, ~] = sort(dim, 2, 'descend');
+        nDimMax = max(dim_sorted);
+        % find number of loc from the max sorted data dimension
+        nLoc = nDimMax(:, 1);
+        if (nLoc < minLocNum)
+            nLoc = [];
+            return;
+        end
+        % find number of iteration as the dimension with value other than 3
+        idx_three = find(nDimMax(:,2:3)==3);
+        nItr = nDimMax(4 - idx_three);
+        if (nItr > maxItrNum)
+                nItr = [];
+            return;
+        end
+    end
+
+
+    function data = getAttrValue (value, name, nLoc, nItr, dim_sorted, splitXYZ) 
+        specialAttr1 = {'cfr', 'efc'};          % value not residue in the last iteration
+        specialAttr2 = {'loc', 'lnc', 'ext'};   % with x,y,z coordinates info.
+        specialAttr3 = {'mbm'};                 % attribute containing reference point info.
+        % retrieve from which iteration to get the value
+        whichItr = guessWhichIteration (value, name, nLoc, nItr, dim_sorted, specialAttr3, specialAttr1);
+        value_itr = {}; name_itr = {};
+        
+        for i = 1 : numel(whichItr)
+            itr = whichItr{i};
+            if (itr == 0)
+                continue;
+            end
+
+            val = squeeze(reshape(value{i}, dim_sorted(i,:)));
+            % attribute has x, y, z coordinates info.
+            if find(strcmp(specialAttr2, name{i}))
+                idx = find(dim_sorted(i, 2:3)==3);  % find dimension == 3
+                if (idx==2)                         % dim: [nLoc, nItr, 3]
+                    val = squeeze(val(:, itr, :));
+                else                                % dim: [nLoc, 3, nItr]
+                    val = squeeze(val(:, :, itr));
+                end
+                if splitXYZ
+                    name_itr = [ name_itr; strcat(name(i),'_x'); strcat(name(i),'_y'); strcat(name(i),'_z') ]; %#ok<AGROW>
+                    value_itr = [ value_itr; {val(:,1)}; {val(:,2)}; {val(:,3)} ]; %#ok<AGROW>
+                    continue;
+                end
+            else
+                val = val(:, itr);
+            end
+            name_itr = [name_itr; name(i)];         %#ok<AGROW>
+            value_itr = [value_itr; {val}];         %#ok<AGROW>
+        end
+        
+        data = cell2struct(value_itr, name_itr);
+
+    end
+
+
+    function whichItr = guessWhichIteration (value, name, nLoc, nItr, dim_sorted, attrExclude, specialAttr)
+        nAttr = length(name);
+        whichItr = cell(nAttr, 1);
+        whichItr(:) = {1};
+        if (nItr == 1)
+            return;
+        end
+        for i = 1 : length(name)
+            % attribute in the exclusion list, remove
+            if find(strcmp(attrExclude, name{i}))
+                whichItr{i} = 0;
+                continue;
+            end
+            % attribute don't correspond to each localization, remove
+            if (dim_sorted(i, 1) ~= nLoc)
+                whichItr{i} = 0;
+                continue;
+            end
+            % attributes dimension is nLoc by 1, take the only value
+            if (dim_sorted(i,2) == 1 && dim_sorted(i,3) == 1)
+                whichItr{i} = 1;
+                continue;
+            end
+            % special attribute stores value not in the last iteration
+            if find(strcmp(specialAttr, name{i}))
+                itr = value{cellfun(@(x) strcmp(x, 'itr'), name)};
+                [~, idx] = max(nansum(value{i})); %#ok<NANSUM>
+                
+                if idx ~= nItr
+                nthItr = 1 + itr(1, idx);
+                nthText = 'th';
+                if     1 == nthItr
+                    nthText = 'st';
+                elseif 2 == nthItr
+                    nthText = 'nd';
+                elseif 3 == nthItr
+                    nthText = 'rd';
+                end
+                fprintf('reading %s from %d%s iteration (%d / %d).\n', ...
+                    name{i}, nthItr, nthText, idx, nItr);
+                end
+
+
+                whichItr{i} = idx;
+            else % by default, attribute take value from last iteration
+                whichItr{i} = nItr;
+            end
+        end
+    end
+
