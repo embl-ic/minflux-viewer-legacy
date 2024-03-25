@@ -17,7 +17,7 @@ It is initially created in order to support a user project, which is to tracking
 2. Right click on the script initApp.m, and Run. If in case there's no Run option, open it in MATLAB and run it. The main UI of the MINFLUX data plot application should appear.
 3. Click on the Load Data button to load a MATLAB (.mat) format raw data of MINFLUX. The data can be:    
     - directly exported from Abberior Imspector software;
-    - converted from numpy format (as SMAP workflow);
+    - converted from numpy format (with this [python script](/code/additional_functions/npy2mat.py) as SMAP workflow);
     - converted from zarr format (with this [python script](/code/additional_functions/zarr2mat.py));
 
 
