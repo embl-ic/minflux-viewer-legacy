@@ -8,7 +8,7 @@
 # 2. The script will convert numpy data into MATLAB .mat data file
 # 3. The MATLAB data file exported with this script will be arranged
 #     different from Abberior Imspector exported MATLAB data
-# 4!!!. It most probably won't compatible with Abberior's 2024.02.19 software update.
+# 4!!!. It most probably won't work with Abberior's 2024.02.19 software update.
 #
 # <Ziqiang.Huang@embl.de>
 # date: 2024.03.25
