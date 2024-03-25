@@ -30,7 +30,7 @@ It is initially created in order to support a user project, which is to tracking
  v1.0: 2023.10.12   initial commit to EMBL gitlab
  v1.1: 2024.03.25   new function added: filter import/export; parser of new Abberior data format
 
-## Known issues
+## Known issue
  - histogram plot sometimes won't update correctly, with attribute has single constant value, or most identical values.
 
 ## Publication
