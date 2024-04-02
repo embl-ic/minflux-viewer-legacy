@@ -22,6 +22,7 @@ function arrangeData (app)
             value = app.data.(attrName);
             app.data.(attrName) = value(vld, :);
         end
+        app.nLoc = sum(vld);
 
     end
     
