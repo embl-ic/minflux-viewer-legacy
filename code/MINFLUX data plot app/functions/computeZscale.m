@@ -1,32 +1,37 @@
 function success = computeZscale (app)
-    % get trace ID and occurence
-    %tid_vld = app.data.tid(app.data.vld);
+
+    % known value range of RIMF
+    RIMF = 0.65; tolerance = 0.1;
+
     success = false;
     tid = app.data.tid;
     id = unique(tid);
     freq = histcounts(tid, [id; inf])';
     num_id = numel(id);
     % estimate isotropy for each of the selected traces
-    zScale_tid = zeros (num_id, 1);
+    zScale_trace = zeros (num_id, 1);
     for i = 1 : num_id
-        zScale_tid(i, :) = freq(i) .* ...
-            estimateZscale ( app, ...
-            app.data.loc_x(tid==id(i)), ...
-            app.data.loc_y(tid==id(i)), ...
-            app.data.loc_z(tid==id(i)) );
+         zScale = estimateZscale ( app, ...
+                app.data.loc_x(tid==id(i)), ...
+                app.data.loc_y(tid==id(i)), ...
+                app.data.loc_z(tid==id(i)) );
+         if (zScale < RIMF - tolerance || zScale > RIMF + tolerance)
+             zScale = nan;
+         end
+         zScale_trace(i, :)  = zScale;
     end
     % remove outlier
-    outlier = isoutlier(zScale_tid);
-    zScale_tid = zScale_tid(~outlier, :);
+    outlier = isnan(zScale_trace);
+    zScale_trace = zScale_trace(~outlier, :);
     freq = freq(~outlier, :);
-    if (size(zScale_tid, 1) ~= 1)
+    if (size(zScale_trace, 1) ~= 1)
         %isotropy = isotropy ./ freq;
-        zScale_tid = sum(zScale_tid,'omitnan') / sum(freq(~isnan(zScale_tid(:,1))));
+        zScale_trace = sum(zScale_trace.*freq) / sum(freq);
     end
-    if (zScale_tid<0.5 || zScale_tid>1.0)
+    if (zScale_trace < RIMF - tolerance || zScale_trace > RIMF + tolerance)
         disp(' Failed to compute z-scale from loc data!');
     else
         success = true;
-        app.zScale = zScale_tid;
+        app.zScale = zScale_trace;
     end
 end

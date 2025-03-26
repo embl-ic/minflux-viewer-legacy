@@ -1311,9 +1311,10 @@ classdef MINFLUX_data_plot < matlab.apps.AppBase
             app.zScale = app.zscaleEditField.Value;
             app.zScaleAutoCheckBox.Value = false;     % not neccessary
             app.xyz(:, 3) = app.data.loc_z * app.zScale;
+            app.data.znm = app.data.loc_z * app.zScale * 1e9;
 
             try
-                app.scatterPlot.ZData = app.xyz(app.ftr, 3);
+                app.scatterPlot.ZData = app.data.znm( app.ftr );
             catch ME
                 error(" line 870: Failed to update scatter Plot ROI!");
             end
@@ -1339,8 +1340,9 @@ classdef MINFLUX_data_plot < matlab.apps.AppBase
             end
             app.zscaleEditField.Value = app.zScale;
             app.xyz(:, 3) = app.data.loc_z * app.zScale;
+            app.data.znm = app.data.loc_z * app.zScale * 1e9;
             try
-                app.scatterPlot.ZData = app.xyz(app.ftr, 3);
+                app.scatterPlot.ZData = app.data.znm( app.ftr );
                 %app.scatterPlot_roi.ZData = app.xyz(app.index_roi && app.ftr, 3);
                 %app.scatterPlot.ZData = app.scatterPlot.ZData * app.zScale;
                 %app.scatterPlot_roi.ZData = app.scatterPlot_roi.ZData * app.zScale;
@@ -1561,7 +1563,7 @@ classdef MINFLUX_data_plot < matlab.apps.AppBase
 
             % Create colormapDropDown
             app.colormapDropDown = uidropdown(app.PanelScatter);
-            app.colormapDropDown.Items = {'default', 'glasbey', 'parula', 'hsv', 'hot', 'gray', 'bone', 'copper', 'pink', 'white', 'flag', 'lines', 'colorcube', 'vga', 'jet', 'prism', 'cool', 'autumn', 'spring', 'winter', 'summer'};
+            app.colormapDropDown.Items = {'default', 'glasbey', 'parula', 'jet', 'turbo', 'hsv', 'hot', 'gray', 'bone', 'copper', 'pink', 'white', 'flag', 'lines', 'colorcube', 'vga', 'prism', 'cool', 'autumn', 'spring', 'winter', 'summer'};
             app.colormapDropDown.ValueChangedFcn = createCallbackFcn(app, @colormapDropDownValueChanged, true);
             app.colormapDropDown.Position = [206 42 104 22];
             app.colormapDropDown.Value = 'default';

@@ -1,7 +1,15 @@
 function addExtraAttr (app)
+    % add customized extra attribute: dt, time_trace, dst, spd, ftr(not in app.data), and idx 
+
     % 1-based iteration
     %app.data.itr = int8(1 + app.data.itr(app.data.vld, :));
     app.data.itr = int8(1 + app.data.itr);
+
+    % add xnm, ynm, and znm
+    app.data.xnm = app.data.loc_x * 1e9;
+    app.data.ynm = app.data.loc_y * 1e9;
+    app.data.znm = app.data.loc_z * 1e9;
+
     % locate trace change index in raw data
     tim = app.data.tim;
     tid = app.data.tid;

@@ -23,7 +23,6 @@ function arrangeData (app)
             app.data.(attrName) = value(vld, :);
         end
         app.nLoc = sum(vld);
-
     end
     
     % get trace ID, and nLoc per trace
