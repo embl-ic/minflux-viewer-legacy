@@ -1,8 +1,11 @@
-function density = compute_local_density (x, y, z, voxel_size, smooth_sigma)
+function density = compute_local_density (x, y, z, voxel_size, smooth_sigma, try_kdtree)
 
-    
+    % KDTree range search compute more accurate local density (spherical), but an order slower;
     tic;
-
+    
+    if nargin < 6
+        try_kdtree = false;	
+    end
     if nargin < 5
         smooth_sigma = 1;
     end
@@ -15,9 +18,7 @@ function density = compute_local_density (x, y, z, voxel_size, smooth_sigma)
         x = x * 1e9; y = y * 1e9; z = z * 1e9;
     end
     
-    boolean try_kdtree = false;
-    % KDTree range search compute more accurate local density (spherical),
-    % but an order slower;
+    
     if try_kdtree
         disp("compute local density with KD-Tree range search takes:");
         density = kdtree_range_density (x, y, z, voxel_size);
