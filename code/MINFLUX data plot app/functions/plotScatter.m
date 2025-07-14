@@ -22,7 +22,7 @@ function plotScatter (app)
     %app.fig_scatter.Position(3) = 1024;
     %app.fig_scatter.Position(4) = 1024;
     set(0, 'CurrentFigure', app.fig_scatter);
-    app.scatterPlot = scatter3(app.data.xnm(app.ftr), app.data.ynm(app.ftr), app.data.znm(app.ftr), '.');
+    app.scatterPlot = scatter3(app.xyz(app.ftr,1), app.xyz(app.ftr,2), app.xyz(app.ftr,3), '.');
     
     app.scatterPlot.DataTipTemplate.DataTipRows(end+1) = dataTipTextRow("tid",  num2cell(app.data.tid(app.ftr)));
     app.ax_scatter = gca;
