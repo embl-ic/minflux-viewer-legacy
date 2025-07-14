@@ -1,0 +1,25 @@
+function data = add_attribute_to_data (data, name, value, idx)
+
+    if isempty(data) 
+        return
+    end
+    
+    if nargin < 4
+        idx = numel(app.prop.attr_names) + 1;
+    end
+    
+
+    data.attr.name = value;
+    
+    if (idx == 0)
+
+    elseif (idx == 1)
+
+    elseif (idx > numel(app.prop.attr_names))
+        
+    else
+
+    names = []
+    data.prop.attr_names{idx} = name;
+
+end

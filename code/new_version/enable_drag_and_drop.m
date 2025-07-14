@@ -15,14 +15,18 @@ function enable_drag_and_drop (target, dropFcn)
                 %  DnD_uifigure(target, @(o,dat)set(o,'Items',dat.names));
                 % 201001 Wrote it, by Xiangrui.Li at gmail.com 
                 % 201023 Remove uihtml by using ww.executeJS
-                fh = ancestor(target, 'figure');
-                h = findall(fh, 'Type', 'uibutton', 'Tag', 'uiFileDnD');
-                if ~isempty(h)
-                    h.UserData(end+1,:) = {dropFcn target};
-                    return;
-                end
-                drawnow; ww = matlab.internal.webwindowmanager.instance.windowList; %#ok<NASGU>
-                ww = matlab.internal.webwindowmanager.instance.windowList;
+                %fh = ancestor(target, 'figure');
+                % h = findall(fh, 'Type', 'uibutton', 'Tag', 'uiFileDnD');
+                % if ~isempty(h)
+                %     h.UserData(end+1,:) = {dropFcn target};
+                %     return;
+                % end
+
+                %disp("enable drag and drop takes:");
+                %tic;
+
+                drawnow; ww = matlab.internal.webwindowmanager.instance.windowList; 
+                %ww = matlab.internal.webwindowmanager.instance.windowList;
                 ww = ww(strcmp(matlab.ui.internal.FigureServices.getFigureURL(target), {ww.URL}));
                 ww.enableDragAndDropAll;
                 h = uibutton(target, 'Position', [1 1 0 0], 'Text', 'drag_drop_virtual_button', ...
@@ -54,6 +58,8 @@ function enable_drag_and_drop (target, dropFcn)
                     "};"], newline));
                 drawnow; ww.executeJS(sprintf(jsStr, h.Text));
                 ww.FileDragDropCallback = {@dragEnter h};
+
+                %toc;
                 %% fired when drag enters uifigure
                 function dragEnter(ww, names, h)
                     for i = size(h.UserData,1):-1:1 %  redo in case pos changed or resized

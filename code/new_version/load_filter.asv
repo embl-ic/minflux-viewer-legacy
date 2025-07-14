@@ -1,8 +1,6 @@
 function load_filter (app, jsonfile, jsonpath)
     
-    % will populate app.filters property in this function, and this
-    % function only!!!
-
+    % will pop
     if isequal(jsonfile, 0) || isequal(jsonpath, 0)
         return;
     end
@@ -33,7 +31,7 @@ function load_filter (app, jsonfile, jsonpath)
             minVal = row.min;
             maxVal = row.max;
             
-            ftr = compute_filter_array (data, {apply, attr, plotVar, minVal, maxVal});
+            ftr = compute_filter_array (app, {apply, attr, plotVar, minVal, maxVal});
 
             filters(i, :) = {false, attr, plotVar, minVal, maxVal, ftr}; % when loading filter from json file, make apply filter to false for all
 

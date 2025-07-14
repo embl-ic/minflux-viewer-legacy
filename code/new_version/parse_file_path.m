@@ -16,7 +16,7 @@ function parse_file_path (app, file_fullpath)
             load_filter (app, strcat(name, ext), folder);
 
         case {".tif", ".tiff"}  % image file
-
+            load_tif (app, strcat(name, ext), folder);
 
     end
 

@@ -1,4 +1,4 @@
-function glasbey_LUT = make_glasbey (nObj)
+function glasbey_LUT = glasbey (nObj)
     % nObj = 8; glasbey_LUT = zeros(nObj, 3);
     % if isempty(app.scatterPlot) || ~isgraphics(app.scatterPlot)
     %     return;

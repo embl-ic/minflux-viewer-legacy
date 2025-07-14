@@ -16,31 +16,27 @@ function load_data (app, file_name, folder)
     % report loading status to viewer app GUI, somehow this doesn't work...  
     app.StatusTextArea.Value = "Loading MINFLUX (.mat) data...";
 
-
     %% 2, validate new data, reset app.data structure, and load new data into it (reset GUI?)
     [valid, data] = validate_raw_data (app, folder, file_name);  %!!! file duplicated!!!
     if ~valid
         app.StatusTextArea.Value = "MINFLUX data file is not valid!";
         return;
     else
-        app.StatusTextArea.Value = ["Data loaded:"; data.file.name];
+        app.StatusTextArea.Value = ["Data loaded:"; file.name];
     end
-    update_Prefs_with_file (app, data.file.folder, data.file.name);
+    update_Prefs_with_file (app, folder, file_name);
 
 
-    %% 3, compute and store additional data properties: prop, attr, ...
-    data = compute_extra_property (data, app.Prefs);
+    %% 3, compute and store additional data properties
+    data = compute_extra_property (data);
+
+    set_active_data (app, data);        % make the freshly loaded data as the active data and add to app
 
 
-    %% 4, make the freshly loaded data as the active data and append to MINFLUX Viewer app
-    set_active_data (app, data);
-    
+    %% 4, check additional action in prefs, associated with load data
+    actions = app.Prefs.data;
 
-    %% 5, check additional action in prefs, associated with loading data
-    data_actions = app.Prefs.data;
-    
-    % if now app stores more than 1 dataset, show Data Selector app anyway
-    if data_actions.show_data_info || ~first_load
+    if actions.show_data_info || ~first_load
         idx = find( cellfun(@(x) isequal(x.Tag, "dialog_info"), app.children_apps), 1 );
         if isempty(idx)         % no data selector, display new one
             app.children_apps{end+1} = dialog_info (app);
@@ -50,19 +46,19 @@ function load_data (app, file_name, folder)
         end
     end
 
-    if data_actions.shw_attr_plot
+    if actions.shw_attr_plot
         app.children_apps{end+1} = plot_attribute (app);
     end
 
-    if data_actions.show_histogram
+    if actions.show_histogram
         app.children_apps{end+1} = plot_histogram (app);
     end
 
-    if data_actions.show_scatter
+    if actions.show_scatter
         app.children_apps{end+1} = plot_scatter (app);
     end
 
-    if data_actions.show_render
+    if actions.show_render
         app.children_apps{end+1} = interactive_render_MINFLUX (app);
     end
     

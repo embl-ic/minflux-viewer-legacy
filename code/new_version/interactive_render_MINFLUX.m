@@ -1,111 +1,107 @@
-function fig_render = render_localization (app)
+function fig_render2 = interactive_render_MINFLUX (app)
     % 
     %
     % Ziqiang Huang: <ziqiang.huang@embl.de>
     % Last update: 2025.02.05
- 
-    % get active data from app
-    idx = get_active_data_index (app);
-    if isempty(idx)
-        return;
-    end
-    global data; %#ok<GVMIS>
-    data = app.data{idx};
     
+    idx = get_active_data_index(app);
+    if isempty(idx)
+        return
+    end
+    data = app.data{idx};
 
-   
+    param = struct;
 
+    %% get MINFLUX data properties
+    if nargin == 0
+        [param.file.name, param.file.folder] = uigetfile('*.mat', "select MINFLUX raw data .mat file");
+        if isequal(param.file.name, 0)
+            return;
+        end
+        param.data = load(fullfile(param.file.folder, param.file.name), '-mat');
+    else
+        param.data = data;
+    end
 
-    % load data into appeter
+    % load data into parameter
     load_data ();
     
     % generate preview render image
-    fig_name = strcat("Render Preview : ", data.file.name);
-    fig_render = findall(0, 'Type', 'figure', 'Name', fig_name);
-
-
-    if isempty(fig_render)
-
-        fig_render = figure('Name', fig_name, 'NumberTitle', 'off', 'Tag', "figure_render", "DeleteFcn", {@close_child_figure, app});
-        ax = axes (fig_render);
-
-        screenSize = groot().ScreenSize;
-        fig_pos = [screenSize(3)*0.1, screenSize(4)*0.1, screenSize(4)*0.8, screenSize(4)*0.8];
-        fig_render.Position = fig_pos;
-    
-        image_handle = imshow(data.render.images.image, 'parent', ax);
-        axis( ax, 'image' );
-        ax_width_pixel = round( range(ax.XAxis.Limits) );
-        
-        auto_lut (image_handle);
-        
-        % generate keyboard shortcut
-        set(fig_render, 'KeyPressFcn', @keyPressed);
-        
-        % generate context menu corresponding to right click on figure
-        cm = uicontextmenu(fig_render);
-        uimenu(cm, "Text", "Calibration", "MenuSelectedFcn", @config_calibration);
-        uimenu(cm, "Text", "Channel", "MenuSelectedFcn", @config_channel);
-        uimenu(cm, "Text", "Gaussian Smooth", "MenuSelectedFcn", @apply_gaussian);
-        uimenu(cm, "Text", "Orthogonal View", "MenuSelectedFcn", @create_ortho_views);
-        uimenu(cm, "Text", "Draw ROI (to export)", "MenuSelectedFcn", @draw_roi);
-        uimenu(cm, "Text", "Export to Tiff", "MenuSelectedFcn", @export_to_tiff);
-        uimenu(cm, "Text", "help", "MenuSelectedFcn", @show_help);
-        image_handle.ContextMenu = cm;
-    
-        [~, cal_box] = make_annotation ();
-
-    else
-
-        data.render.images = generate_preview (data.render.param);
-        img = data.render.images.image;
-        set(image_handle, 'cdata', img);
-        auto_lut (image_handle);
-
+    screenSize = groot().ScreenSize;
+    fig_render2 = figure('Name', 'Interactive MINFLUX Rendering Preview', 'NumberTitle', 'off');
+    if ~isempty(param.file.name)
+        set( fig_render2, 'Name', strcat(param.file.name(1 : end-4), ' (preview)') );
     end
+    fig_pos = [screenSize(3)*0.1, screenSize(4)*0.1, screenSize(4)*0.8, screenSize(4)*0.8];
+    fig_render2.Position = fig_pos;
+    ax = gca;
+    hImg = imshow(param.images.image, 'parent', ax);
+    axis( ax, 'image' );
 
+    ax_width_pixel = round( range(ax.XAxis.Limits) );
+    
+    % cal_str = {strcat("pixel size: ", num2str(param.calibration.pixel_size), " nm      voxel depth:", num2str(param.calibration.voxel_depth), " nm      zPos: ", num2str(param.posZ), " nm")};
+    % cal_box = annotation(fig, 'textbox', [.2 .85 .4 .1], 'String', cal_str, 'Color', 'w', 'FitBoxToText', 'on');
+    % cal_box.FontWeight = 'bold';
+    %cal_box.FontSize = 12; 
+    
+    
+    auto_lut (hImg);
+    
+    % generate keyboard shortcut
+    set(fig_render2, 'KeyPressFcn', @keyPressed);
+    
+    % generate context menu corresponding to right click on figure
+    cm = uicontextmenu(fig_render2);
+    uimenu(cm, "Text", "Load Data", "MenuSelectedFcn", @load_new_data);
+    uimenu(cm, "Text", "Calibration", "MenuSelectedFcn", @config_calibration);
+    uimenu(cm, "Text", "Channel", "MenuSelectedFcn", @config_channel);
+    uimenu(cm, "Text", "Gaussian Smooth", "MenuSelectedFcn", @apply_gaussian);
+    uimenu(cm, "Text", "Orthogonal View", "MenuSelectedFcn", @create_ortho_views);
+    uimenu(cm, "Text", "Draw ROI (to export)", "MenuSelectedFcn", @draw_roi);
+    uimenu(cm, "Text", "Export to Tiff", "MenuSelectedFcn", @export_to_tiff);
+    uimenu(cm, "Text", "help", "MenuSelectedFcn", @show_help);
+    hImg.ContextMenu = cm;
 
-
+    [scale_bar, cal_box] = make_annotation ();
     %set(fig, 'SizeChangedFcn', @fig_size_changed);
 
     %% call back functions of UI component
     % Callback function for load track data onto the scatter plot
     function keyPressed (~, evt)
-
-        param = data.render.param;
-
         switch evt.Key
 
             case 'leftarrow'    % z - 1*(voxel depth)
-                param.posZ = max(min(data.prop.xyz(:,3)), param.posZ - param.voxel_depth);
-                param.posZ = round( param.posZ * 10 ) / 10; % allow 0.1 nm precision on Z position
+                param.posZ = max(min(param.xyz(:,3)), param.posZ - param.calibration.voxel_depth);
                 img = find_image ();
-                set(image_handle, 'cdata', img);
-                auto_lut (image_handle);
+                set(hImg, 'cdata', img);
+                auto_lut (hImg);
                 cal_box.String{3} = strcat("zPos: ", num2str(param.posZ), " nm");
 
             case 'rightarrow'   % z + 1*(voxel depth)
-                param.posZ = min(max(data.prop.xyz(:,3)), param.posZ + param.voxel_depth);
-                param.posZ = round( param.posZ * 10 ) / 10; % allow 0.1 nm precision on Z position
+                param.posZ = min(max(param.xyz(:,3)), param.posZ + param.calibration.voxel_depth);
                 img = find_image ();
-                set(image_handle, 'cdata', img);
-                auto_lut (image_handle);
+                set(hImg, 'cdata', img);
+                auto_lut (hImg);
                 cal_box.String{3} = strcat("zPos: ", num2str(param.posZ), " nm");
 
             case 'downarrow'    % increase max colormap limit, plot getting dimmer
                 CLim = get(ax, 'CLim');
-                step = max(image_handle.CData(:)) / 100;
+                step = max(hImg.CData(:)) / 100;
                 CLim(2) = CLim(2) + step;
                 set(ax, 'CLim', CLim);
 
             case 'uparrow'      % reduce max colormap limit, plot getting brighter
                 CLim = get(ax, 'CLim');
-                step = max(image_handle.CData(:)) / 100;
+                step = max(hImg.CData(:)) / 100;
                 CLim(2) = max(CLim(2) - step, CLim(1)+1);
                 set(ax, 'CLim', CLim);
             
             case 'c'
                 config_channel();
+
+            case 'f'    % load new data
+                load_new_data();
             
             case 'g'    % apply Gaussian filter 2D / 3D to current image
                 apply_gaussian();
@@ -125,78 +121,112 @@ function fig_render = render_localization (app)
             otherwise
                 %disp(evt.Key + " pressed");
         end
-        
-        data.render.param = param;
+
     end
+
+
+    % load MINFLUX data
+    function load_new_data (~, ~)
+        [file, path] = uigetfile('*.mat', "select MINFLUX raw data .mat file");
+        if isequal(file, 0)
+           return;
+        else
+            RIMF = param.calibration.RIMF;
+            param = struct();
+            param.file.name = file;
+            param.file.folder = path;
+            param.calibration.RIMF = RIMF;
+        end
+
+        param.data = load(fullfile(path, file), '-mat');
+        load_data();
+        set( fig_render2, 'Name', strcat(param.file.name(1 : end-4), ' (preview)') );
+        img = generate_preview ();
+        wh_ratio = size(img, 2) / size(img, 1); % width / height ratio from image
+        set(hImg, 'cdata', img);
+        hImg.ContextMenu = cm;
+        auto_lut (hImg);
+
+        
+
+        fig_pos = fig_render2.Position();
+        % if fig_pos(3) / fig_pos(4) > wh_ratio % width > height; increase height
+        %     fig.Position(4) = fig.Position(3) / wh_ratio;
+        % else    % height > width; increase width
+        %     fig.Position(3) = fig.Position(4) * wh_ratio;
+        % end
+        if wh_ratio > 1 % width > height
+            fig_render2.Position(3) = groot().ScreenSize(4) * 0.8;
+            fig_render2.Position(4) = fig_render2.Position(3) / wh_ratio;
+        else        % height > width
+            fig_render2.Position(4) = groot().ScreenSize(4) * 0.8;
+            fig_render2.Position(3) = fig_render2.Position(4) * wh_ratio;
+        end
+
+        %axis( ax, 'image' );
+        axis( ax, 'auto');
+        delete(scale_bar); delete(cal_box);
+        [scale_bar, cal_box] = make_annotation ();
+
+    end
+
 
     % configure pixel and voxel size, z scaling factor (RIMF)
     function config_calibration (~, ~)
-        cali = data.calibration;
-        xyz = data.prop.xyz;
-        param = data.render.param;
-
         prompt = {'pixel size (nm):', 'voxel depth (znm):', 'z scale factor:', 'Gaussian sigma (xynm, znm):'};
         title = 'calibration value:';
         dims = [1, 45];
-        definput = { num2str(param.pixel_size), num2str(param.voxel_depth), num2str(cali.RIMF), num2str(cali.sigma', '%.2f, %.2f') };
+        definput = { num2str(param.calibration.pixel_size), num2str(param.calibration.voxel_depth), num2str(param.calibration.RIMF), num2str(param.calibration.sigma', '%.2f, %.2f') };
         answer = inputdlg(prompt, title, dims, definput);
         if isempty(answer)
             return;
         end
         
-        pixel_size_old = param.pixel_size;
-        cali.pixel_size =  str2double(answer{1});
-        cali.voxel_depth = str2double(answer{2});
+        pixel_size_old = param.calibration.pixel_size;
+        param.calibration.pixel_size =  str2double(answer{1});
+        param.calibration.voxel_depth = str2double(answer{2});
         RIMF =   str2double(answer{3});
-        cali.sigma = str2double( [split(answer{4}, ",")] );
-        if isnan(cali.sigma)
-            cali.sigma = [0; 0];
-        elseif length(cali.sigma) < 2
-            cali.sigma(2) = 0;
+        param.calibration.sigma = str2double( [split(answer{4}, ",")] );
+        if isnan(param.calibration.sigma)
+            param.calibration.sigma = [0; 0];
+        elseif length(param.calibration.sigma) < 2
+            param.calibration.sigma(2) = 0;
         end
         
-        if (RIMF ~= cali.RIMF)
-            xyz(:, 3) = xyz(:, 3) / cali.RIMF * RIMF;
-            param.posZ = param.posZ / cali.RIMF * RIMF;
-            data.render.roi(:, 3) = data.render.roi(:, 3) / cali.RIMF * RIMF;
-            for i = 1 : length(data.render.images)
-                z_new = data.render.images(i).param.posZ / cali.RIMF * RIMF;
-                z_new = round( z_new * 10 ) / 10;
-                data.render.images(i).posZ = z_new;
+        if (RIMF ~= param.calibration.RIMF)
+            param.xyz(:, 3) = param.xyz(:, 3) / param.calibration.RIMF * RIMF;
+            param.posZ = param.posZ / param.calibration.RIMF * RIMF;
+            param.roi(:, 3) = param.roi(:, 3) / param.calibration.RIMF * RIMF;
+            for i = 1 : length(param.images)
+                 z_new = param.images(i).z / param.calibration.RIMF * RIMF;
+                 z_new = round( z_new * 10 ) / 10;
+                 param.images(i).z = z_new;
             end
-            cali.RIMF = RIMF;
+            param.calibration.RIMF = RIMF;
         end
         
         xlim2 = ax.XLim(2);
         img = find_image ();
-        set(image_handle, 'cdata', img);
-        auto_lut (image_handle);
+        set(hImg, 'cdata', img);
+        auto_lut (hImg);
 
         % re-render image with current xlim ylim
-        if cali.pixel_size ~= pixel_size_old && ax.XLim(2) == xlim2
-            ax.XLim = ax.XLim * pixel_size_old / cali.pixel_size;
-            ax.YLim = ax.YLim * pixel_size_old / cali.pixel_size;
+        if param.calibration.pixel_size ~= pixel_size_old && ax.XLim(2) == xlim2
+            ax.XLim = ax.XLim * pixel_size_old / param.calibration.pixel_size;
+            ax.YLim = ax.YLim * pixel_size_old / param.calibration.pixel_size;
             drawnow;
         end
 
-        cal_box.String{1} = strcat("pixel size: ", num2str(cali.pixel_size), " nm");
-        cal_box.String{2} = strcat("voxel depth:", num2str(cali.voxel_depth), " nm");
+        cal_box.String{1} = strcat("pixel size: ", num2str(param.calibration.pixel_size), " nm");
+        cal_box.String{2} = strcat("voxel depth:", num2str(param.calibration.voxel_depth), " nm");
         cal_box.String{3} = strcat("zPos: ", num2str(param.posZ), " nm");
         
-        param.pixel_size = cali.pixel_size;
-        param.voxel_depth = cali.voxel_depth;
-        param.sigma_xy = cali.sigma(1);
-        param.sigma_z = cali.sigma(2);
-
-        data.calibration = cali;
-        data.prop.xyz = xyz;
-        data.render.param = param;
     end
 
 
     function config_channel (~, ~)
         disp("... getting dcr info. create channel configuration figure...");
-        dcr_all = data.channel.dcr(~isnan(data.channel.dcr));
+        dcr_all = param.channel.dcr(~isnan(param.channel.dcr));
         % create histogram, draw two color Box
         fig_dcr = figure('Name', 'dcr (all iter) histogram of data');
         cm_dcr = uicontextmenu(fig_dcr);
@@ -207,15 +237,15 @@ function fig_render = render_localization (app)
         set(ax_dcr, 'ContextMenu', cm_dcr);
         histogram(ax_dcr, dcr_all, 'Normalization', 'pdf');
         hold on;
-        data.channel.cut1 = max(0, ax_dcr.XLim(1)) + 0.01;
-        data.channel.cut2 = min(1, ax_dcr.XLim(2)) - 0.01;
-        data.channel.keep_ch3 = false;
-        data.channel.RGB = [1, 2, 3]; % default LUT is RGB for the 1st, 2nd and 3rd channels
-        cut1_line = images.roi.Rectangle(ax_dcr, 'Position', [0; 0; data.channel.cut1; ax_dcr.YLim(2)]', ...
+        param.channel.cut1 = max(0, ax_dcr.XLim(1)) + 0.01;
+        param.channel.cut2 = min(1, ax_dcr.XLim(2)) - 0.01;
+        param.channel.doCh3 = false;
+        param.channel.RGB = [1, 2, 3]; % default LUT is RGB for the 1st, 2nd and 3rd channels
+        cut1_line = images.roi.Rectangle(ax_dcr, 'Position', [0; 0; param.channel.cut1; ax_dcr.YLim(2)]', ...
             'Color', 'r', 'LineWidth', 0.1, 'FaceAlpha', 0.2, 'InteractionsAllowed', 'all', ...
             'Deletable', 0, 'ContextMenu', cm_dcr);
 
-        cut2_line = images.roi.Rectangle(ax_dcr, 'Position', [data.channel.cut2; 0; 1-data.channel.cut2; ax_dcr.YLim(2)]', ...
+        cut2_line = images.roi.Rectangle(ax_dcr, 'Position', [param.channel.cut2; 0; 1-param.channel.cut2; ax_dcr.YLim(2)]', ...
             'Color', 'g', 'LineWidth', 0.1, 'FaceAlpha', 0.2, 'InteractionsAllowed', 'all', ...
             'Deletable', 0, 'ContextMenu', cm_dcr);
         drawnow;
@@ -229,14 +259,14 @@ function fig_render = render_localization (app)
             id_c = find(x>mid, 1, 'first');
             half_sum = 2.5 - 0.5*y(id_c);
             ysum1 = arrayfun(@(i) sum(y(id_c-i:id_c-1)), 1:id_c-1 );
-            data.channel.cut1 = find(ysum1 >= half_sum, 1, 'first');
+            param.channel.cut1 = find(ysum1 >= half_sum, 1, 'first');
             ysum2 = arrayfun(@(i) sum(y(id_c+1:id_c+i)), 1:101-id_c );
-            data.channel.cut2 = find(ysum2 >= half_sum, 1, 'first');
-            data.channel.cut1 = (id_c - data.channel.cut1) / 100;
-            data.channel.cut2 = (id_c + data.channel.cut2) / 100;
+            param.channel.cut2 = find(ysum2 >= half_sum, 1, 'first');
+            param.channel.cut1 = (id_c - param.channel.cut1) / 100;
+            param.channel.cut2 = (id_c + param.channel.cut2) / 100;
             plot(x, y, 'r-');
-            set(cut1_line, 'Position', [0; 0; data.channel.cut1; ax_dcr.YLim(2)]');
-            set(cut2_line, 'Position', [data.channel.cut2; 0; 1-data.channel.cut2; ax_dcr.YLim(2)]');
+            set(cut1_line, 'Position', [0; 0; param.channel.cut1; ax_dcr.YLim(2)]');
+            set(cut2_line, 'Position', [param.channel.cut2; 0; 1-param.channel.cut2; ax_dcr.YLim(2)]');
         else
             disp("... dcr distribution cannot be used to separate channels!"); 
         end
@@ -261,16 +291,16 @@ function fig_render = render_localization (app)
             uicontrol('Parent',d, 'Style','text', 'Position',[0 70 55 15],...
                    'String', 'Value:', 'FontWeight', 'bold');
             do_ch3 = uicontrol('Parent',d, 'Style','checkbox', 'Position',[10 45 200 15],...
-                   'String', 'keep middle portion in 3rd channel', 'Value', data.channel.keep_ch3 );
+                   'String', 'keep middle portion in 3rd channel', 'Value', param.channel.doCh3 );
             uicontrol('Parent',d, 'Position',[100 10 55 25],'String','OK', 'Callback', @finish);
 
             uiwait(d);
             function finish (~, ~)
-                data.channel.cut1 = str2double(value1.String);
-                data.channel.cut2 = str2double(value2.String);
-                set(cut1_line, 'Color', color1.String{color1.Value}, 'Position', [0; 0; data.channel.cut1; ax_dcr.YLim(2)]');
-                set(cut2_line, 'Color', color2.String{color2.Value}, 'Position', [data.channel.cut2; 0; 1-data.channel.cut2; ax_dcr.YLim(2)]');
-                data.channel.keep_ch3 = do_ch3.Value;
+                param.channel.cut1 = str2double(value1.String);
+                param.channel.cut2 = str2double(value2.String);
+                set(cut1_line, 'Color', color1.String{color1.Value}, 'Position', [0; 0; param.channel.cut1; ax_dcr.YLim(2)]');
+                set(cut2_line, 'Color', color2.String{color2.Value}, 'Position', [param.channel.cut2; 0; 1-param.channel.cut2; ax_dcr.YLim(2)]');
+                param.channel.doCh3 = do_ch3.Value;
                 %delete(d);
             end
         end
@@ -287,20 +317,20 @@ function fig_render = render_localization (app)
         end
 
         function apply_channel ( on_trace )
-            data.channel.do_trace = on_trace;
-            data.channel.doChannel = true;
-            data.channel.cut1 = cut1_line.Position(1) + cut1_line.Position(3);
-            data.channel.cut2 = cut2_line.Position(1);
-            if data.channel.keep_ch3
-                app.numC = 3;
+            param.channel.doTrace = on_trace;
+            param.channel.doChannel = true;
+            param.channel.cut1 = cut1_line.Position(1) + cut1_line.Position(3);
+            param.channel.cut2 = cut2_line.Position(1);
+            if param.channel.doCh3
+                param.numC = 3;
             else
-                app.numC = 2;
+                param.numC = 2;
             end
-            data.channel.RGB(1) = find(cut1_line.Color);
-            data.channel.RGB(2) = find(cut2_line.Color);
+            param.channel.RGB(1) = find(cut1_line.Color);
+            param.channel.RGB(2) = find(cut2_line.Color);
             img = find_image ();
-            set(image_handle, 'cdata', img);
-            auto_lut (image_handle);
+            set(hImg, 'cdata', img);
+            auto_lut (hImg);
         end
 
     end
@@ -308,31 +338,31 @@ function fig_render = render_localization (app)
 
     function apply_gaussian (~, ~)
         % apply 2D or 3D Gaussian to histogram rendered image
-        sigma = data.calibration.sigma;
+        sigma = param.calibration.sigma;
         if sigma(1) == 0
             return;
         end
 
-        data.render.param.do_smooth = ~data.render.param.do_smooth;
+        param.doSmooth = ~param.doSmooth;
 
         img = find_image ();
-        set(image_handle, 'cdata', img);
-        auto_lut (image_handle);
+        set(hImg, 'cdata', img);
+        auto_lut (hImg);
 
     end
 
 
     function create_ortho_views (~, ~)
-        if data.prop.num_dim == 2
+        if param.nDim == 2
             return;
         end
-        x = data.prop.xyz(:, 1); y = data.prop.xyz(:, 2); z = data.prop.xyz(:, 3);
-        xedge = min(x) : data.calibration.pixel_size : max(x) + data.calibration.pixel_size;
-        yedge = min(y) : data.calibration.pixel_size : max(y) + data.calibration.pixel_size;
-        zedge = min(z) : data.calibration.voxel_depth : max(z) + data.calibration.voxel_depth;
+        x = param.xyz(:, 1); y = param.xyz(:, 2); z = param.xyz(:, 3);
+        xedge = min(x) : param.calibration.pixel_size : max(x) + param.calibration.pixel_size;
+        yedge = min(y) : param.calibration.pixel_size : max(y) + param.calibration.pixel_size;
+        zedge = min(z) : param.calibration.voxel_depth : max(z) + param.calibration.voxel_depth;
         numX = length(xedge) - 1; numY = length(yedge) - 1 ; numZ = length(zedge) - 1;
 
-        if data.channel.doChannel
+        if param.channel.doChannel
             ch_idx = getChannelIdx (true);
             counts_xy = zeros( [numX, numY, 3] );
             counts_xz = zeros( [numX, numZ, 3] );
@@ -352,8 +382,8 @@ function fig_render = render_localization (app)
         end
         
         fig_xy = figure('Name', 'XY view', 'NumberTitle', 'off', 'CloseRequestFcn', @close_all);
-        if app.doSmooth && data.calibration.sigma(1) > 0
-            sigmaXY = data.calibration.sigma(1) / data.calibration.pixel_size;
+        if param.doSmooth && param.calibration.sigma(1) > 0
+            sigmaXY = param.calibration.sigma(1) / param.calibration.pixel_size;
             auto_lut( imshow(imgaussfilt(counts_xy, [sigmaXY, sigmaXY]), 'parent', axes(fig_xy)) );
         else
             auto_lut( imshow(counts_xy, 'parent', axes(fig_xy)) );
@@ -369,8 +399,8 @@ function fig_render = render_localization (app)
         fig_zy = figure('Name', 'ZY view', 'NumberTitle', 'off', 'Position', [pos_xy(1), pos_xy(2)-200, pos_xy(3), width_z], 'CloseRequestFcn',@close_all);
         
         
-        if app.doSmooth && data.calibration.sigma(2) > 0
-            sigmaZ = data.calibration.sigma(2) / data.calibration.voxel_depth;
+        if param.doSmooth && param.calibration.sigma(2) > 0
+            sigmaZ = param.calibration.sigma(2) / param.calibration.voxel_depth;
             auto_lut( imshow(imgaussfilt(counts_xz, [sigmaXY, sigmaZ]), 'parent', axes(fig_xz)) );
             auto_lut( imshow(imgaussfilt(counts_zy, [sigmaZ, sigmaXY]), 'parent', axes(fig_zy)) );
         else
@@ -389,28 +419,28 @@ function fig_render = render_localization (app)
 
     
     function draw_roi (~, ~)
-        roi = app.roi;
-        roi(:, 3) = roi(:, 3) - min(data.prop.xyz(:, 3)); % ROI Z coordinate to figure coordinates minZ : maxZ to 0 : rangeZ
-        px = data.calibration.pixel_size; vx = data.calibration.voxel_depth;
-        if roi(1, 1) == min( data.prop.xyz(:, 1) )
+        roi = param.roi;
+        roi(:, 3) = roi(:, 3) - min(param.xyz(:, 3)); % ROI Z coordinate to figure coordinates minZ : maxZ to 0 : rangeZ
+        px = param.calibration.pixel_size; vx = param.calibration.voxel_depth;
+        if roi(1, 1) == min( param.xyz(:, 1) )
             xMin = range(ax.YLim) * 0.05 + ax.YLim(1); 
         else
             xMin = roi(1, 1) / px;
         end
 
-        if roi(1, 2) == min( data.prop.xyz(:, 2) )
+        if roi(1, 2) == min( param.xyz(:, 2) )
             yMin = range(ax.XLim) * 0.05 + ax.XLim(1); 
         else
             yMin = roi(1, 2) / px;
         end
 
-        if roi(2, 1) == max( data.prop.xyz(:, 1) )
+        if roi(2, 1) == max( param.xyz(:, 1) )
             xMax = range(ax.YLim) * 0.95 + ax.YLim(1); 
         else
             xMax = roi(2, 1) / px;
         end
 
-        if roi(2, 2) == max( data.prop.xyz(:, 2) )
+        if roi(2, 2) == max( param.xyz(:, 2) )
             yMax = range(ax.XLim) * 0.95 + ax.XLim(1); 
         else
             yMax = roi(2, 2) / px;
@@ -418,9 +448,9 @@ function fig_render = render_localization (app)
         
         zMin = 0; zMax = 0;     % z min and max in figure coordinate
 
-        if data.prop.num_dim == 2     % 2D case
+        if param.nDim == 2     % 2D case
             roi_xy = images.roi.Rectangle(ax, 'Color', 'y', 'LineWidth', 0.1, 'Position', [yMin; xMin; yMax-yMin; xMax-xMin]');
-            fig_xy = fig_render;
+            fig_xy = fig_render2;
         else
             fig_xy = findobj( 'Type', 'Figure', 'Name', 'XY view' );
             fig_xz = findobj( 'Type', 'Figure', 'Name', 'XZ view' );
@@ -436,13 +466,13 @@ function fig_render = render_localization (app)
             ax_zy = get(fig_zy,'Children');
             
             ZLim = min( range(ax_xz.XLim), range(ax_zy.YLim) );   % get Z axis size
-            if roi(1, 3) == 0   %min( data.prop.xyz(:, 3) )
+            if roi(1, 3) == 0   %min( param.xyz(:, 3) )
                 zMin = ZLim * 0.25 + 0.5; 
             else
                 zMin = roi(1, 3) / vx;
             end
     
-            if roi(2, 3) == range( data.prop.xyz(:, 3) )
+            if roi(2, 3) == range( param.xyz(:, 3) )
                 zMax = ZLim * 0.75 + 0.5; 
             else
                 zMax = roi(2, 3) / vx;
@@ -479,9 +509,9 @@ function fig_render = render_localization (app)
                     yMin = pos(1);          zMin = pos(2); 
                     yMax = pos(1) + pos(3); zMax = pos(2) + pos(4);
             end
-            %app.roi = [xMin, yMin, zMin; xMax, yMax, zMax];
+            %param.roi = [xMin, yMin, zMin; xMax, yMax, zMax];
 
-            if any(data.prop.xyz(:,3) ~= 0)
+            if any(param.xyz(:,3) ~= 0)
                 roi_xy.Position = [yMin; xMin; yMax-yMin; xMax-xMin]';
                 roi_xz.Position = [zMin; xMin; zMax-zMin; xMax-xMin]';
                 roi_zy.Position = [yMin; zMin; yMax-yMin; zMax-zMin]';
@@ -496,12 +526,12 @@ function fig_render = render_localization (app)
         
         function remove_roi (~, ~)
             delete(roi_xy);
-            app.roi = [min(data.prop.xyz); max(data.prop.xyz)];
+            param.roi = [min(param.xyz); max(param.xyz)];
         end
 
         function apply_roi (~, ~)
-            app.roi = [xMin*px, yMin*px, zMin*vx; xMax*px, yMax*px, zMax*vx];
-            app.roi(:, 3) = app.roi(:, 3) + min(data.prop.xyz(:, 3));   % apply the z offset
+            param.roi = [xMin*px, yMin*px, zMin*vx; xMax*px, yMax*px, zMax*vx];
+            param.roi(:, 3) = param.roi(:, 3) + min(param.xyz(:, 3));   % apply the z offset
             delete(roi_xy);
         end
 
@@ -510,14 +540,14 @@ function fig_render = render_localization (app)
 
     function export_to_tiff (~, ~)
         % check bit depth here:
-        %disp("current image max value: " + max(image_handle.CData(:)) ) ;
-        %disp("app bit depth: " + app.bitDepth);
+        %disp("current image max value: " + max(hImg.CData(:)) ) ;
+        %disp("param bit depth: " + param.bitDepth);
 
         % export to tiff file with current setting: pixel size, voxel size, channel option, roi bounds
-        if isempty(app.file.name) || isempty(app.file.folder)
+        if isempty(param.file.name) || isempty(param.file.folder)
             save_path = "";
         else
-            save_path = fullfile(app.file.folder, strcat(app.file.name(1 : end-4), ".tiff"));
+            save_path = fullfile(param.file.folder, strcat(param.file.name(1 : end-4), ".tiff"));
         end
         [tif_name, tif_dir] = uiputfile('*.tiff', "save to tiff file", save_path);
         if isequal(tif_name, 0) || isequal(tif_dir, 0)
@@ -525,26 +555,26 @@ function fig_render = render_localization (app)
         end
 
         % calculate render image dimensions
-        xedge = app.roi(1, 1) : data.calibration.pixel_size  : app.roi(2, 1) + data.calibration.pixel_size;
-        yedge = app.roi(1, 2) : data.calibration.pixel_size  : app.roi(2, 2) + data.calibration.pixel_size;
-        zedge = app.roi(1, 3) : data.calibration.voxel_depth : app.roi(2, 3) + data.calibration.voxel_depth;
+        xedge = param.roi(1, 1) : param.calibration.pixel_size  : param.roi(2, 1) + param.calibration.pixel_size;
+        yedge = param.roi(1, 2) : param.calibration.pixel_size  : param.roi(2, 2) + param.calibration.pixel_size;
+        zedge = param.roi(1, 3) : param.calibration.voxel_depth : param.roi(2, 3) + param.calibration.voxel_depth;
         
         % call write to TIFF function
         success = false;
 
-        if data.channel.doChannel
+        if param.channel.doChannel
             ch_idx = getChannelIdx (false);
             for c = 1 : 3
                 pathSave = fullfile(tif_dir, strcat(tif_name(1 : end-5), "_C", num2str(c), ".tiff"));
-                success = render_to_tiff_file (data.prop.xyz, xedge, yedge, zedge, pathSave, ch_idx(:, c))  || success;
+                success = render_to_tiff_file (param.xyz, xedge, yedge, zedge, pathSave, ch_idx(:, c))  || success;
             end
         else    % no channel separation
             pathSave = fullfile(tif_dir, tif_name);
-            success = render_to_tiff_file (data.prop.xyz, xedge, yedge, zedge, pathSave);
+            success = render_to_tiff_file (param.xyz, xedge, yedge, zedge, pathSave);
         end
 
         if success
-            if data.channel.doChannel
+            if param.channel.doChannel
                 pathSave = extractBefore(pathSave, '_C') + "_C{i}.tiff";
             end
             
@@ -593,76 +623,109 @@ function fig_render = render_localization (app)
 
 %% member functions
     function load_data ()
-        % xyz coordinates, in nanometer, and Z scaling corrected
-        xyz = 1e9 * [data.attr.loc_x, data.attr.loc_y, data.attr.loc_z];
-    
-        data.prop.origin = min ( xyz );
-        xyz = xyz - data.prop.origin;           % re-zero XYZ coordinates to axis origin
-        xyz(:, 3) = xyz(:, 3) - mean( xyz(:, 3) );  % move Z=0 at the middle of the data volume
-    
-        data.prop.xyz = single( round(xyz, 2) ); % convert to single precision, and 0.01 nm resolution
+        if isempty(param) || ~isfield(param, 'data')
+            return;
+        end
+        % load attribute
+        vld = param.data.attr.vld;
+        tid = param.data.attr.tid(vld)';
+        loc = param.data.attr.loc;
+        dcr = param.data.attr.dcr;
 
+        if (numel(size(loc)) == 2) % in case only 1 iteration in data
+            loc = loc(vld, :);
+        else
+            loc = squeeze(loc(vld, end, :)); % select last iteration of MINFLUX data
+        end
 
+         % get localization data dimension, 2D or 3D
+        if all( loc(:, 3) == 0 )
+            param.nDim = 2;
+        else
+            param.nDim = 3;
+        end
+
+        % get trace information
+        [param.data.num_loc, param.data.trace_idx] = get_trace_info (tid);
 
         % calculation of Localization Precision, do not apply Gaussian filter by default
-        if ~isfield(data, 'calibration')
-            data.calibration = struct;
-        end
-        if ~isfield(data.calibration, 'sigma') || isempty( data.calibration.sigma )
-            data.calibration.sigma = compute_Loc_precision( app );
-        end
-        % prepare coordinate data, convert to nanometer, apply z scaling, and re-zero
-        if ~isfield(data.calibration, 'RIMF')
-            data.calibration.RIMF = 0.67;   % default z scale is 0.67
-        end
-
-
-        % init render ROI, and bit depth
-        data.render.roi = [min(data.prop.xyz); max(data.prop.xyz)];
-        data.render.bitDepth = 16;
-
-        % init render image parameters:
-        data.render.param.do_smooth = false;
-        data.render.param.do_channel = false;
-        data.render.param.posZ = 0;
+        param.calibration.sigma = compute_Loc_precision (loc, param.data.num_loc, param.data.trace_idx);
         
+        % by default, don't apply Gaussian filter
+        param.doSmooth = false;
+
+        % prepare coordinate data, convert to nanometer, apply z scaling, and re-zero
+        if ~isfield(param.calibration, 'RIMF')
+            param.calibration.RIMF = 0.67;   % default z scale is 0.67
+        end
+        loc_nm  = loc * 1e9; % localization translate to nanometer
+        loc_nm(:, 3) = loc_nm(:, 3) * param.calibration.RIMF;
+        xyz = loc_nm - min(loc_nm);
+        xyz(:, 3) = xyz(:, 3) - mean(xyz(:, 3));
+
+        % store localization related parameters
+        param.data.origin = min(loc_nm);
+        param.xyz = single( round(xyz, 2) ); % change to single precision, we only need 2 decimal point precision, i.e.: 0.01 nm
+        param.posZ = 0;
+        param.roi = [min(param.xyz); max(param.xyz)];
+        param.bitDepth = 16;
 
         % read dcr, plot histogram, get initial value of separation
-        data.channel.dcr = data.file.raw_data.dcr; % load all iteration
-        data.channel.dcr_trace = get_dcr_trace_mean (data.channel.dcr, data.prop.trace_idx);
-        %data.channel.doChannel = false;
-        data.channel.do_trace = false;
-        data.channel.numC = 1;
-        data.channel.cut1 = 1;
-        data.channel.cut2 = 1;
-        data.channel.RGB = [1, 2, 3];
+        param.channel.dcr = dcr(vld, :);
+        param.channel.dcr_trace = get_dcr_trace_mean (param.channel.dcr, param.data.trace_idx);
+        param.channel.doChannel = false;
+        param.channel.doTrace = false;
+        param.numC = 1;
+        param.channel.cut1 = 1;
+        param.channel.cut2 = 1;
+        param.channel.RGB = [1, 2, 3];
         
-
         % generate preview figure
-        pixel_size = min(range(data.prop.xyz(:, 1:2))) * 2 / max(groot().ScreenSize(3:4));
-        data.calibration.pixel_size = pixel_size;
-        
-        if data.prop.num_dim == 3
-            data.calibration.voxel_depth = pixel_size;
+        pixel_size = min(range(xyz(:, 1:2))) * 2 / max(groot().ScreenSize(3:4));
+        param.calibration.pixel_size = pixel_size;
+        if param.nDim == 3
+            param.calibration.voxel_depth = pixel_size;
         else
-            data.calibration.voxel_depth = 0;
+            param.calibration.voxel_depth = 0;
         end
-        data.render.param.pixel_size = data.calibration.pixel_size;
-        data.render.param.voxel_depth = data.calibration.voxel_depth;
-        data.render.param.sigma_xy = data.calibration.sigma(1);
-        data.render.param.sigma_z = data.calibration.sigma(2);
 
-
-        %data.render = struct;
-        %data.render.posZ = 0;
-        data.render.images = generate_preview (data.render.param);
-
-        % data.render.images = struct("pixel_size", data.calibration.pixel_size, "voxel_depth", data.calibration.voxel_depth, "posZ", 0, ...
-        %     "smoothed", false, "sigmaXY", data.calibration.sigma(1), "sigmaZ", data.calibration.sigma(2), ...
-        %     "c", data.channel.numC, "channelTrace", data.channel.do_trace, "cut1", data.channel.cut1, "cut2", data.channel.cut2, "RGB", data.channel.RGB, ...
-        %     "image", generate_preview ());
+        param.images = struct("pixel_size", param.calibration.pixel_size, "voxel_depth", param.calibration.voxel_depth, "z", param.posZ, ...
+            "smoothed", param.doSmooth, "sigmaXY", param.calibration.sigma(1), "sigmaZ", param.calibration.sigma(2), ...
+            "c", param.numC, "channelTrace", param.channel.doTrace, "cut1", param.channel.cut1, "cut2", param.channel.cut2, "RGB", param.channel.RGB, ...
+            "image", generate_preview ());
     end
 
+
+    function [num_loc, trace_idx] = get_trace_info (tid)
+        [~, ia, ic] = unique(tid);
+        trace_idx = [ia, [ ia(2:end)-1; length(tid) ] ];
+        num_loc = accumarray(ic, 1);    %num_loc = arrayfun(@(id) sum(tid==id), uid);  % !!! too slow
+    end
+
+
+    function sigma = compute_Loc_precision (loc, num_loc, trace_idx)
+        % get number of localization per trace, with minimum 20 loc in trace
+        minLoc = 20;
+        valid_tid = num_loc >= minLoc;
+        % compute center for each trace
+        center = arrayfun(@(id) mean( loc(trace_idx(id,1) : trace_idx(id,2), :), 1 ),  1:length(trace_idx), 'uni', 0);
+        center = cell2mat(center');
+        center_loc = repelem(center, num_loc, 1);    % trace center
+        % compute distance to its trace center for each localization
+        diff_center_loc = loc - center_loc;         
+        dist_loc_xy = vecnorm(diff_center_loc(:, 1:2), 2, 2);
+        % std of (distance to center) per trace
+        std_dist_xy = arrayfun(@(id) std(dist_loc_xy(trace_idx(id,1) : trace_idx(id,2), :), 1 ), 1:length(trace_idx));
+        % compute the same for Z coordinates, if 3D data
+        if param.nDim == 2
+            std_dist_z = zeros(length(trace_idx), 1);
+        else
+            dist_loc_z = abs( diff_center_loc(:, 3) );
+            std_dist_z = arrayfun(@(id) std(dist_loc_z(trace_idx(id,1) : trace_idx(id,2), :), 1 ), 1:length(trace_idx));
+        end
+        % sigma: median of the standarad deviations, XY, Z (no RIMF applied to Z)
+        sigma = [1e9 * median(std_dist_xy(valid_tid)); 1e9 * median(std_dist_z(valid_tid)) ];
+    end
 
 
     function dcr_trace = get_dcr_trace_mean (dcr, trace_idx)
@@ -686,129 +749,93 @@ function fig_render = render_localization (app)
     end
 
 
-    function img = find_image ( param )
-        if nargin < 1
-            param = data.render.param;
+    function img = find_image (posZ, do_smooth)
+        if nargin < 2
+            do_smooth = param.doSmooth;
         end
-
-        % if nargin < 2
-        %     do_smooth = data.render.do_smooth;
-        % end
-        % if nargin < 1
-        %     posZ = data.render.posZ;
-        % end
-
-
-        param.posZ = round( param.posZ * 10 ) / 10; % allow 0.1 nm precision on Z position
-        images = data.render.images;
+        if nargin < 1
+            posZ = param.posZ;
+        end
+        posZn = round( posZ * 10 ) / 10; % allow 0.1 nm precision on Z position
+        images = param.images;
         
-        exist = arrayfun(@(x) isequaln(x, param), [images.param]);
-
-        % exist = ...
-        %     [images.z] == posZn & ...
-        %     [images.pixel_size] == data.calibration.pixel_size & ...
-        %     [images.voxel_depth] == data.calibration.voxel_depth & ...
-        %     [images.smoothed] == do_smooth & ...
-        %     [images.sigmaXY] == data.calibration.sigma(1) & ...
-        %     [images.sigmaZ] == data.calibration.sigma(2) & ...
-        %     [images.c] == app.numC & ...
-        %     [images.channelTrace] == data.channel.do_trace & ...
-        %     [images.cut1] == data.channel.cut1 & ...
-        %     [images.cut2] == data.channel.cut2 & ...
-        %     cellfun(@(imageRGB) isequaln(imageRGB, data.channel.RGB), {images.RGB});
+        exist = ...
+            [images.z] == posZn & ...
+            [images.pixel_size] == param.calibration.pixel_size & ...
+            [images.voxel_depth] == param.calibration.voxel_depth & ...
+            [images.smoothed] == do_smooth & ...
+            [images.sigmaXY] == param.calibration.sigma(1) & ...
+            [images.sigmaZ] == param.calibration.sigma(2) & ...
+            [images.c] == param.numC & ...
+            [images.channelTrace] == param.channel.doTrace & ...
+            [images.cut1] == param.channel.cut1 & ...
+            [images.cut2] == param.channel.cut2 & ...
+            cellfun(@(imageRGB) isequaln(imageRGB, param.channel.RGB), {images.RGB});
         
         if any(exist)
             img = images(exist).image;
-        else    % image not exist, render new one and store to app
+        else    % image not exist, render new one and store to param
             
-            %img = generate_preview ( param );
-            data.render.images(end+1) = generate_preview ( param );
-            img = data.render.images(end).image;
-            % data.render(end+1) = struct( ...
-            %     "pixel_size", data.calibration.pixel_size, "voxel_depth", data.calibration.voxel_depth, "z", posZn, ...
-            %     "smoothed", do_smooth, "sigmaXY", data.calibration.sigma(1), "sigmaZ", data.calibration.sigma(2), ...
-            %     "c", app.numC, "channelTrace", data.channel.do_trace, "cut1", data.channel.cut1, "cut2", data.channel.cut2, "RGB", data.channel.RGB, ...
-            %     "image", img);
+            img = generate_preview ( posZ, do_smooth );
+            param.images(end+1) = struct( ...
+                "pixel_size", param.calibration.pixel_size, "voxel_depth", param.calibration.voxel_depth, "z", posZn, ...
+                "smoothed", do_smooth, "sigmaXY", param.calibration.sigma(1), "sigmaZ", param.calibration.sigma(2), ...
+                "c", param.numC, "channelTrace", param.channel.doTrace, "cut1", param.channel.cut1, "cut2", param.channel.cut2, "RGB", param.channel.RGB, ...
+                "image", img);
         end
 
     end
 
 
-    function image = generate_preview (param)
+    function counts = generate_preview ( posZ, do_smooth )
+        % generate new histcount rendered 2d image
+
         % check first if RAM is still avaiable to store cached images
         check_memory ();
-        % get localization xyz coordinates
-        ftr = data.attr.ftr;
-        xyz = data.prop.xyz(ftr, :);
-        % generate histogram preview
-        if param.do_channel
+
+        if nargin < 2
+            do_smooth = param.doSmooth;     % apply Gaussian filter or not 
+        end
+        if nargin < 1
+            posZ = param.posZ;              % position of Z
+        end
+
+        if param.channel.doChannel
             ch_idx = getChannelIdx (true);
-            xedge = min(xyz(:,1)) : param.pixel_size : max(xyz(:,1)) + param.pixel_size;
-            yedge = min(xyz(:,2)) : param.pixel_size : max(xyz(:,2)) + param.pixel_size;
+            xedge = min(param.xyz(:,1)) : param.calibration.pixel_size : max(param.xyz(:,1)) + param.calibration.pixel_size;
+            yedge = min(param.xyz(:,2)) : param.calibration.pixel_size : max(param.xyz(:,2)) + param.calibration.pixel_size;
             counts = zeros(length(xedge)-1, length(yedge)-1, 3);
             for c = 1 : 3
                 if all(ch_idx(:, c)==0)
                     continue;
                 end
-                counts(:, :, c) = get2Dhist (xyz, param.posZ, param.pixel_size, param.voxel_depth, param.do_smooth, ch_idx(:, c));
+                counts(:, :, c) = get2Dhist (param.xyz, posZ, param.calibration.pixel_size, ...
+                    param.calibration.voxel_depth, do_smooth, ch_idx(:, c));
             end
         else
-            counts = get2Dhist (xyz, param.posZ, param.pixel_size, param.voxel_depth, param.do_smooth);
+            counts = get2Dhist (param.xyz, posZ, param.calibration.pixel_size, param.calibration.voxel_depth, do_smooth);
         end
-        % create image struct, with render parameter
-        param.posZ = round( param.posZ * 10 ) / 10;
-        image = struct("param", param, "image", counts);
+
     end
-
-
-    % function counts = generate_preview ( posZ, do_smooth )
-    %     % generate new histcount rendered 2d image
-    % 
-    %     % check first if RAM is still avaiable to store cached images
-    %     check_memory ();
-    % 
-    %     if nargin < 2
-    %         do_smooth = false;     % apply Gaussian filter or not 
-    %     end
-    %     if nargin < 1
-    %         posZ = 0;              % position of Z
-    %     end
-    % 
-    %     if data.render.param.do_channel
-    %         ch_idx = getChannelIdx (true);
-    %         xedge = min(data.prop.xyz(:,1)) : data.calibration.pixel_size : max(data.prop.xyz(:,1)) + data.calibration.pixel_size;
-    %         yedge = min(data.prop.xyz(:,2)) : data.calibration.pixel_size : max(data.prop.xyz(:,2)) + data.calibration.pixel_size;
-    %         counts = zeros(length(xedge)-1, length(yedge)-1, 3);
-    %         for c = 1 : 3
-    %             if all(ch_idx(:, c)==0)
-    %                 continue;
-    %             end
-    %             counts(:, :, c) = get2Dhist (data.prop.xyz, posZ, data.calibration.pixel_size, ...
-    %                 data.calibration.voxel_depth, do_smooth, ch_idx(:, c));
-    %         end
-    %     else
-    %         counts = get2Dhist (data.prop.xyz, posZ, data.calibration.pixel_size, data.calibration.voxel_depth, do_smooth);
-    %     end
-    % 
-    % end
+    
 
     function ch_idx = getChannelIdx ( apply_RGB )
-        if data.channel.do_trace
-            dcr = data.channel.dcr_trace;
+        if param.channel.doTrace
+            dcr = param.channel.dcr_trace;
         else
-            dcr = data.channel.dcr(:, end);
+            dcr = param.channel.dcr(:, end);
         end
         
         ch_idx = false(length(dcr), 3);
         if apply_RGB
-            ch_idx(:, data.channel.RGB(1)) = dcr >= 0 & dcr < data.channel.cut1;   %R
-            ch_idx(:, data.channel.RGB(2)) = dcr >= data.channel.cut2 & dcr <= 1;  %G 
+            ch_idx(:, param.channel.RGB(1)) = dcr >= 0 & dcr < param.channel.cut1;   %R
+            ch_idx(:, param.channel.RGB(2)) = dcr >= param.channel.cut2 & dcr <= 1;  %G 
         else
-            ch_idx(:, 1) = dcr >= 0 & dcr < data.channel.cut1;   % 1st channel
-            ch_idx(:, 2) = dcr >= data.channel.cut2 & dcr <= 1;  % 1st channel
+            ch_idx(:, 1) = dcr >= 0 & dcr < param.channel.cut1;   % 1st channel
+            ch_idx(:, 2) = dcr >= param.channel.cut2 & dcr <= 1;  % 1st channel
         end
-        if data.channel.keep_ch3
-            ch_idx(:, 3) = dcr >= data.channel.cut1 & dcr < data.channel.cut2;  %B
+        if param.channel.doCh3
+            ch_idx(:, 3) = dcr >= param.channel.cut1 & dcr < param.channel.cut2;  %B
         end
     end
     
@@ -826,7 +853,7 @@ function fig_render = render_localization (app)
         numX = length(xedge) - 1;  numY = length(yedge) - 1;
 
         if ~do_smooth       % no Gaussian blur, just compute 2D histogram
-            if data.prop.num_dim == 3 && voxel_depth ~= 0 % 3D case, compute hist 2D from voxel depth defined 3D volume
+            if param.nDim == 3 && voxel_depth ~= 0 % 3D case, compute hist 2D from voxel depth defined 3D volume
                 idx = idx & z >= zPos - voxel_depth & z < zPos + voxel_depth;
             end
             counts = histcounts2 (x(idx), y(idx), xedge, yedge);
@@ -834,12 +861,12 @@ function fig_render = render_localization (app)
         else                % do Gaussian blur, compute 3D histogram, and apply Gaussian kernel
 
             % compute dimension of input image (hist 2D) to be convolved with 3D Gaussian kernel
-            sigma = data.calibration.sigma;
+            sigma = param.calibration.sigma;
             sigma(1) = sigma(1) / pixel_size;  % XY sigma in unit of pixel
             sigma(2) = sigma(2) / voxel_depth; % Z sigma in unit of voxel
             zFilterSize = 2*sigma(2) ; % half of the Gaussian filter size in number of voxels along Z axis (size 1 size)
             % check if 2D data, or voxel size 0, or kernel Z size smaller than 1 voxel 
-            if data.prop.num_dim == 2 || sigma(2) == 0 || zFilterSize < 1.0 % 2D case
+            if param.nDim == 2 || sigma(2) == 0 || zFilterSize < 1.0 % 2D case
                 counts_2d = histcounts2 (x(idx), y(idx), xedge, yedge);
                 counts = imgaussfilt(counts_2d, sigma(1), 'Padding', 0);
             else
@@ -850,7 +877,7 @@ function fig_render = render_localization (app)
                 s = floor( (numZ - 1) / 4 ); slice_save = [1-s:0, 2:s+1] + zFilterSize;
                 
                 num_voxel = numX * numY * numZ;
-                %counts_3d = get3Dhist (data.prop.xyz, xedge, yedge, zedge);
+                %counts_3d = get3Dhist (param.xyz, xedge, yedge, zedge);
                 if num_voxel * ( sigma(1)*2 + sigma(2) ) > exp(1)*1e8
                     disp("... Computing 3D histogram with dimension:");
                     disp("...    " + numX + " * " + numY + " * " + numZ + " voxels...");
@@ -863,19 +890,19 @@ function fig_render = render_localization (app)
                     img_gauss_3d = imgaussfilt3(counts_3d, [sigma(1), sigma(1), sigma(2)], 'Padding', 0);
                 end
                 
-                % save useful 3D slices into cached appeter
+                % save useful 3D slices into cached parameter
                 for i = 1 : numZ
                     posZ = zedge(i) + 0.5; posZn = round( posZ * 10 ) / 10;
-                    data.render(end+1) = struct( ...
+                    param.images(end+1) = struct( ...
                         "pixel_size", pixel_size, "voxel_depth", voxel_depth, "z", posZn, ...
-                        "smoothed", false, "sigmaXY", data.calibration.sigma(1), "sigmaZ", data.calibration.sigma(2), ...
-                        "c", app.numC, "channelTrace", data.channel.do_trace, "cut1", data.channel.cut1, "cut2", data.channel.cut2, "RGB", data.channel.RGB, ...
+                        "smoothed", false, "sigmaXY", param.calibration.sigma(1), "sigmaZ", param.calibration.sigma(2), ...
+                        "c", param.numC, "channelTrace", param.channel.doTrace, "cut1", param.channel.cut1, "cut2", param.channel.cut2, "RGB", param.channel.RGB, ...
                         "image", counts_3d (:, :, i));
                     if ismember(i, slice_save)
-                        data.render(end+1) = struct( ...
+                        param.images(end+1) = struct( ...
                         "pixel_size", pixel_size, "voxel_depth", voxel_depth, "z", posZn, ...
-                        "smoothed", true, "sigmaXY", data.calibration.sigma(1), "sigmaZ", data.calibration.sigma(2), ...
-                        "c", app.numC, "channelTrace", data.channel.do_trace, "cut1", data.channel.cut1, "cut2", data.channel.cut2, "RGB", data.channel.RGB, ...
+                        "smoothed", true, "sigmaXY", param.calibration.sigma(1), "sigmaZ", param.calibration.sigma(2), ...
+                        "c", param.numC, "channelTrace", param.channel.doTrace, "cut1", param.channel.cut1, "cut2", param.channel.cut2, "RGB", param.channel.RGB, ...
                         "image", img_gauss_3d (:, :, i));
                     end
                 end
@@ -889,14 +916,14 @@ function fig_render = render_localization (app)
         maxCount = max(counts(:));
         % check the data type to store the pixel value dynamic range
         if maxCount <= 255
-            data.render.bitDepth = 8;
+            param.bitDepth = 8;
             counts = uint8(counts);
         elseif maxCount <= 65535
-            data.render.bitDepth = 16;
+            param.bitDepth = 16;
             counts = uint16(counts);
         else
             counts = uint32(counts);
-            data.render.bitDepth = 32;    % !!! may not work with ImageJ !!!
+            param.bitDepth = 32;    % !!! may not work with ImageJ !!!
             warning("max counts exceed unsigned 16 bit limit!");
             show_outlier ( counts >= 2e16 );
         end
@@ -922,7 +949,7 @@ function fig_render = render_localization (app)
 
     function success = render_to_tiff_file (xyz, xedge, yedge, zedge, save_path, channel_idx)
         success = false;
-        % parse input appeters
+        % parse input parameters
         if nargin < 6
             channel_idx = true(length(xyz), 1);
         end
@@ -940,17 +967,17 @@ function fig_render = render_localization (app)
         tagstruct.ImageLength = numX;
         tagstruct.ImageWidth =  numY;
         tagstruct.ResolutionUnit = Tiff.ResolutionUnit.Centimeter;  % pixel size only avaialbe in centimeter
-        tagstruct.XResolution = 1e7 / data.calibration.pixel_size;
-        tagstruct.YResolution = 1e7 / data.calibration.pixel_size;
+        tagstruct.XResolution = 1e7 / param.calibration.pixel_size;
+        tagstruct.YResolution = 1e7 / param.calibration.pixel_size;
         tagstruct.Photometric = Tiff.Photometric.MinIsBlack;
-        tagstruct.BitsPerSample = app.bitDepth;    %  8, 16, or 32 bit gray value image
+        tagstruct.BitsPerSample = param.bitDepth;    %  8, 16, or 32 bit gray value image
         tagstruct.SampleFormat = 1;
         tagstruct.SamplesPerPixel = 1;
         tagstruct.Compression = Tiff.Compression.None;
         tagstruct.PlanarConfiguration = Tiff.PlanarConfiguration.Chunky;
-        tagstruct.Software = ['MATLAB ', version('-release'), ' (voxle depth: ', num2str(data.calibration.voxel_depth), ' nm)']; % use software field to record voxel depth
+        tagstruct.Software = ['MATLAB ', version('-release'), ' (voxle depth: ', num2str(param.calibration.voxel_depth), ' nm)']; % use software field to record voxel depth
         % single TIFF file size larger than 4GB will need w8 write format
-        if numX * numY * numZ * app.bitDepth > 2^35 
+        if numX * numY * numZ * param.bitDepth > 2^35 
             t = Tiff(save_path, 'w8');   % big TIFF, will trigger Bio-format
         else
             t = Tiff(save_path, 'w');
@@ -970,7 +997,7 @@ function fig_render = render_localization (app)
                     return;
                 end
                 % get z coordinates corresponding to current Z edge
-                if data.prop.num_dim == 2
+                if param.nDim == 2
                     idx = true(length(z), 1);
                 else
                     idx = z >= zedge( slice ) & z < zedge( slice + 1 );
@@ -987,7 +1014,7 @@ function fig_render = render_localization (app)
                 % prepare Tiff object for writing to file
                 setTag(t, tagstruct);
                 
-                switch app.bitDepth
+                switch param.bitDepth
                     case 8
                         write(t, uint8(count_2d));
                     case 16
@@ -1030,13 +1057,11 @@ function fig_render = render_localization (app)
         % scale bar should be [1, 2, 5, 10, 20, 50, 100, 200, 500] of [nm, um, mm] 
         % max width should be 100 um; with min width 10 nm
         
-        param = data.render.param;
-
         ax_pos = ax.Position;
         nm_width_list = [1, 2, 5, 10, 20, 50, 1e2, 2e2, 5e2, 1e3, 2e3, 5e3, 1e4, 2e4, 5e4, 1e5, 2e5, 5e5, 1e6];
         min_width_ratio_axes = 0.1; max_width_ratio_axes = 0.4; % scale bar width should be between 0.1 - 0.25 axes width
 
-        axes_width_nm = range( data.prop.xyz(:, 2) );
+        axes_width_nm = range( param.xyz(:, 2) );
         axes_width_ratio = ax_pos(3);
         %axes_width_pixel = range( ax.XLim );
         
@@ -1065,50 +1090,50 @@ function fig_render = render_localization (app)
         end
         bar_str = string(width) + unit;
         
-        scale_bar = annotation(fig_render, 'line', bar_xpos, bar_ypos);
+        scale_bar = annotation(fig_render2, 'line', bar_xpos, bar_ypos);
         scale_bar.Color = "white";
         scale_bar.LineWidth = 4;
         
         % create a calibration annotation on upper left corner of current axes
         cal_str = { ...
-            strcat("pixel size: ", num2str(param.pixel_size), " nm"), ...
-            strcat("voxel depth:", num2str(param.voxel_depth), " nm"), ...
+            strcat("pixel size: ", num2str(param.calibration.pixel_size), " nm"), ...
+            strcat("voxel depth:", num2str(param.calibration.voxel_depth), " nm"), ...
             strcat("zPos: ", num2str(param.posZ), " nm"), ...
             strcat("scale bar: ", bar_str) };
-        cal_box = annotation(fig_render, 'textbox', [ax_pos(1) + 0.01, ax_pos(2) + ax_pos(4) - 0.11, 0.3, 0.1], ...
+        cal_box = annotation(fig_render2, 'textbox', [ax_pos(1) + 0.01, ax_pos(2) + ax_pos(4) - 0.11, 0.3, 0.1], ...
             'String', cal_str, 'Color', 'w', 'FitBoxToText', 'on');
         cal_box.FontWeight = 'bold';
 
         set(ax.XAxis, 'LimitsChangedFcn', @axLimitChanged);
-        set(fig_render, 'SizeChangedFcn', @fig_size_changed);
+        set(fig_render2, 'SizeChangedFcn', @fig_size_changed);
     
         function axLimitChanged (src, ~)
             if round(range (src.Limits)) == ax_width_pixel
                 return;
             end
             ax_width_pixel = round(range (src.Limits));
-            %min_width_nm = ax_width_pixel * param.pixel_size * min_width_ratio_axes;
-            ax_width_nm = ax_width_pixel * param.pixel_size;
+            %min_width_nm = ax_width_pixel * param.calibration.pixel_size * min_width_ratio_axes;
+            ax_width_nm = ax_width_pixel * param.calibration.pixel_size;
             max_width_nm = ax_width_nm * max_width_ratio_axes;
             idx = find(nm_width_list<max_width_nm, 1, 'last');
             width_nm = nm_width_list(idx);
             pos = ax.Position;
-            width_ratio_axes = width_nm / (range (src.Limits) * param.pixel_size);
+            width_ratio_axes = width_nm / (range (src.Limits) * param.calibration.pixel_size);
             % calculate scale bar width in ratio to figure
             width_ratio_fig = width_ratio_axes * pos(3);
             
             right_edge = pos(1) + pos(3); 
             
-            w_ax = fig_render.Position(3) * pos(3);
-            h_ax = fig_render.Position(4) * pos(4);
-            w_img = range(image_handle.XData) + 1;
-            h_img = range(image_handle.YData) + 1;
+            w_ax = fig_render2.Position(3) * pos(3);
+            h_ax = fig_render2.Position(4) * pos(4);
+            w_img = range(hImg.XData) + 1;
+            h_img = range(hImg.YData) + 1;
             if w_ax / w_img > h_ax / h_img      % margin on left and right edge
                 % calculate on the horizontal axis, the ratio to the figure of where the image left border sit
-                margin = ( w_ax - (h_ax / h_img * w_img) ) / 2 / fig_render.Position(3);
+                margin = ( w_ax - (h_ax / h_img * w_img) ) / 2 / fig_render2.Position(3);
                 %left_edge = left_edge + margin;
                 right_edge = right_edge - margin;
-                width_ratio_fig = width_nm / ax_width_nm * ( h_ax / h_img * w_img / fig_render.Position(3) );
+                width_ratio_fig = width_nm / ax_width_nm * ( h_ax / h_img * w_img / fig_render2.Position(3) );
             end
             
             bottom_edge = pos(2) + pos(4)*0.02;
@@ -1132,20 +1157,18 @@ function fig_render = render_localization (app)
         end
 
         function fig_size_changed (~, ~)
-            param = data.render.param;
-
-            fg_pos = fig_render.Position();
+            fg_pos = fig_render2.Position();
             ax_pos = ax.Position;
             
             ax_width_pixel = round(range (ax.XAxis.Limits) );
-            ax_width_nm = ax_width_pixel * param.pixel_size;
+            ax_width_nm = ax_width_pixel * param.calibration.pixel_size;
             width_ratio = width_nm / ax_width_nm * ax_pos(3);
 
             w_ax = fg_pos(3) * ax_pos(3);
             h_ax = fg_pos(4) * ax_pos(4);
     
-            w_img = range(image_handle.XData) + 1;
-            h_img = range(image_handle.YData) + 1;
+            w_img = range(hImg.XData) + 1;
+            h_img = range(hImg.YData) + 1;
             
             left_edge =  ax_pos(1); %ax l + (w-w_img) / 2;
             right_edge = ax_pos(1) + ax_pos(3);
@@ -1189,7 +1212,7 @@ function fig_render = render_localization (app)
         mem_removed = 0; img_removed = 0;
         while mem_removed <= MaxRemoveMem & img_removed <= MaxRemoveImage
             mem_before = memory().MemUsedMATLAB;
-            data.render.images(1) = [];
+            param.images(1) = [];
             img_removed = img_removed + 1;
             mem_removed = mem_removed + mem_before - memory().MemUsedMATLAB;
         end

@@ -5,13 +5,15 @@ function data = compute_extra_property (data, Prefs)
     %    itr (to 1-based), dt, dst, spd, nLoc_trace, tim_trace, ftr, idx
     %
     %data.prop = property: add
-    %   num_dim, trace_idx, num_loc_per_trace, attr_names ?origin, xyz, xyz to xnm, ynm, znm?
+    %   num_dim, origin, xyz, trace_idx, num_loc_per_trace, attr_names
+    %   RIMF to calibration?
+    %   xyz to xnm, ynm, znm
     %
-    %data.cali = calibration: add
+    %data.calib = calibration: add
     %   RIMF, loc_precision, local_density, pixel_size
     %
     %data.channel = channel: add
-    %   dcr (last or all iter), cut1, cut2, keep_ch3, do_trace, ?RGB
+    %   dcr (last or all iter), cut1, cut2, do_ch3, do_trace, ?RGB
     %
 
 
@@ -22,7 +24,7 @@ function data = compute_extra_property (data, Prefs)
         data.prop.num_dim = 2;
     end
     
-    % xyz nm with re-zeroed origin moved all to render localization function
+    % xyz nm with 
     
     % get trace ID, and num_loc per trace
     [~, ia, ic] = unique(data.attr.tid);
@@ -76,10 +78,8 @@ function data = compute_extra_property (data, Prefs)
     else
         calibration.RIMF = app.Prefs.plot.rimf_value;
     end
-    calibration.pixel_size = 4;
     if Prefs.data.compute_locPrec
         calibration.loc_precision = compute_Loc_precision (data);
-        calibration.pixel_size = calibration.loc_precision(1);
     end
     if Prefs.data.compute_local_density
         calibration.local_density = compute_local_density ( ...
@@ -88,7 +88,7 @@ function data = compute_extra_property (data, Prefs)
             Prefs.data.local_density_radius);
         data = add_attribute_to_data (data, 'den', calibration.local_density, 41);
     end
-    data.cali = calibration;
+    data.calibration = calibration;
 
 
     % prepare channel related properties

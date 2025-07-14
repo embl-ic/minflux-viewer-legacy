@@ -1,18 +1,27 @@
 function fig_histogram = plot_histogram (app)
-
-    var_types = {'per loc', 'trace mean', 'trace stdev', 'trace max', 'trace min', 'trace range'}; % remove median and mode
-
-    if isempty(app.data) || ~isfield(app.data, 'attr') || ~isfield(app.data, 'prop') || ~isfield(app.data.prop, 'attr_names')
+    
+    % get active data from app
+    idx = get_active_data_index (app);
+    if isempty(idx)
         return;
     end
+    data = app.data{idx};
     
+    % histogram input variable type: either per localization, or per trace:
+    % for trace, the value could be: mean, stdDev, max, min, or range       % removed median and mode
+    var_types = {'per loc', 'trace mean', 'trace stdev', 'trace max', 'trace min', 'trace range'};
+
     
-    attr_names = app.data.prop.attr_names;
-    attrs = app.data.attr;
+    attr_names = data.prop.attr_names;
+    attrs = data.attr;
     
     ftr = attrs.ftr;
-    trace_idx = app.data.prop.trace_idx;
-    %num_loc_per_trace = app.data.prop.num_loc_per_trace;
+    
+    % update trace_ID, and trace_idx
+    tid = data.attr.tid(ftr);
+    [~, ia, ~] = unique(tid);
+    trace_idx = [ia, [ ia(2:end)-1; length(tid) ] ];
+    %num_loc_per_trace = data.prop.num_loc_per_trace;
 
     % histogram figure with UI componenets:
     % min value spinner; bin size spinner; max value spinner;
@@ -27,14 +36,14 @@ function fig_histogram = plot_histogram (app)
     % min and max:
     % log(min) : log(max/min)/100 : log(max)
 
-    fig_name = strcat("Attribute Histogram : ", app.data.file.name);
+    fig_name = strcat("Attribute Histogram : ", data.file.name);
 
     fig_histogram = findall(0, 'Type', 'figure', 'Name', fig_name);
 
 
     if isempty(fig_histogram)
 
-        fig_histogram = uifigure('Name', fig_name, 'NumberTitle', 'off', 'Tag', "figure_histogram", 'DeleteFcn', @delete_fig);
+        fig_histogram = uifigure('Name', fig_name, 'NumberTitle', 'off', 'Tag', "figure_histogram", 'DeleteFcn', {@close_child_figure, app});
         ax = axes (fig_histogram);
 
         val_hist = attrs.efo(ftr, :);
@@ -50,23 +59,21 @@ function fig_histogram = plot_histogram (app)
         ax.Position(2) = 0.2;
     
         attr_list = uidropdown( ...
-                        'Parent', fig_histogram, ...
+                        'Parent', fig_histogram, 'Tag', "attr_list", ...
                         'Position' , [60 5 70 30], ...
                         'Fontsize' , 15, ...
                         'Items', attr_names, ...
                         'Value', 'efo', ...
                         'ValueChangedFcn', @hist_data_change);
-        attr_list.Tag = "attr_list";
 
         var_type = uidropdown( ...
-                        'Parent', fig_histogram, ...
+                        'Parent', fig_histogram, 'Tag', "var_type", ...
                         'Position', [140 5 110 30], ...
                         'Fontsize', 15, ...
                         'Items', var_types, ...
                         'ValueChangedFcn', @hist_data_change);
-        var_type.Tag = "var_type";
          
-                    uilabel( ...
+                uilabel( ...
                         'Parent', fig_histogram, ...
                         'Position', [260 5 60 30], ...
                         'Fontsize', 15, ...
@@ -107,22 +114,23 @@ function fig_histogram = plot_histogram (app)
     end
 
 
-    
-
-
-    
-    function delete_fig (~, ~)
-        idx = find( cellfun(@(x) isequal(x, fig_histogram), app.children_apps) );
-        app.children_apps(idx) = [];
-    end
-   
-
     function hist_data_change (~, ~)
         % update histogram data, plot, and reset bin size (automatic calculated)
         val_hist = get_hist_value(attrs.(attr_list.Value)(ftr, :), var_type.Value);
         hist_plot.Data = val_hist;
         hist_plot.BinMethod = 'auto';
         ax.XLabel.String = strcat(attr_list.Value, " : ", var_type.Value);
+
+        filter_min = findobj(fig_histogram, 'Tag', 'filter_min');
+        if ~isempty(filter_min)
+            filter_min.Value = hist_plot.BinLimits(1);
+        end
+        filter_max = findobj(fig_histogram, 'Tag', 'filter_max');
+        if ~isempty(filter_max)
+            filter_max.Value = hist_plot.BinLimits(2);
+        end
+
+        
         remove_zero.Value = 0;
         % update bin size spinner limits, value, and step size
         rng_hist = range(val_hist);
@@ -199,7 +207,7 @@ function fig_histogram = plot_histogram (app)
 
 
     function val = get_hist_value (attr_value, var_type)
-
+            
         switch var_type
             case 'per loc'
                 val = attr_value;

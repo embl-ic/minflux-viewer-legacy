@@ -1,8 +1,66 @@
-function fig_render = render_localization (app)
+function fig_render = render_localization2 (app)
+    %%
+    %   render a pixel based image from localization data:
     % 
+    %   - 1, get active data from app:
+    %       - 1, check filter (ftr) (ROI?);
+    %
+    %       - 2, check prop:
+    %           - xyz, num_dim, trace_idx
+    %       - 3, calibration:
+    %           - pixel_size, voxel_depth, sigma, RIMF
+    %       - 4, channel:
+    %           - dcr: = data.file.raw_data.dcr; % load all iteration
+    %           - dcr_trace: get_dcr_trace_mean (data.channel.dcr, data.prop.trace_idx);
+    %           - doChannel: false;
+    %           - do_trace: false;
+    %           - numC: 1, 2, 3
+    %           - cut1, cut2: 1, 1;
+    %           - RGB: = [1, 2, 3]; % [R G B];
+    %
+    %       - 5, render:
+    %           - param: pixel_size, voxel_depth, sigma_xy, sigma_z, do_smooth, do_channel, posZ
+    %           - posZ
+    %           - roi: = [min(data.prop.xyz); max(data.prop.xyz)];
+    %           - bitDepth: 8, 16, 32;
+    %           - images:
+    %               - param: param
+    %               - image: histcounts 2D or 3D
+    %
+    %
+    %
+    %
+    %
+    %
+    %
+    %
+    %
+    %
+    %
+    %
+    %
+    %   - 2, get render figure of the active data:
+    %       - not exist:    make new
+    %           - figure name: 
+    %           - generate 1st render preview:
+    %
+    %           - create imshow figure, get figure handle, get axes handle
+    %           - auto LUT (colormap) with local density
+    %           - implement keyboard shortcuts
+    %           - implement right click context menus
+    %           - add annotation to figure: zPos, voxel size: [], 
+    %
+    %
+    %
+    %
+    %
+    %       - exist:        update
+    %
+    %
     %
     % Ziqiang Huang: <ziqiang.huang@embl.de>
     % Last update: 2025.02.05
+    %%
  
     % get active data from app
     idx = get_active_data_index (app);
@@ -11,9 +69,6 @@ function fig_render = render_localization (app)
     end
     global data; %#ok<GVMIS>
     data = app.data{idx};
-    
-
-   
 
 
     % load data into appeter
@@ -593,17 +648,6 @@ function fig_render = render_localization (app)
 
 %% member functions
     function load_data ()
-        % xyz coordinates, in nanometer, and Z scaling corrected
-        xyz = 1e9 * [data.attr.loc_x, data.attr.loc_y, data.attr.loc_z];
-    
-        data.prop.origin = min ( xyz );
-        xyz = xyz - data.prop.origin;           % re-zero XYZ coordinates to axis origin
-        xyz(:, 3) = xyz(:, 3) - mean( xyz(:, 3) );  % move Z=0 at the middle of the data volume
-    
-        data.prop.xyz = single( round(xyz, 2) ); % convert to single precision, and 0.01 nm resolution
-
-
-
         % calculation of Localization Precision, do not apply Gaussian filter by default
         if ~isfield(data, 'calibration')
             data.calibration = struct;

@@ -10,7 +10,7 @@ function apply_filter_to_data (app)
     data = app.data{idx};
     name = data.file.name;
 
-    window_all = app.children_apps; %findall(groot(), 'Type', 'figure');
+    window_all = app.CallingApp.children_apps; %findall(groot(), 'Type', 'figure');
     tag_match = cellfun(@(win) startsWith(win.Tag, 'figure_'), window_all, 'uni', 0);
     match = cell2mat( tag_match' );
     window_all( ~match ) = [];
@@ -28,29 +28,28 @@ function apply_filter_to_data (app)
 
             case "figure_attribute"
                 fig = plot_attribute (app);
-                % line_plot = findobj(fig, 'Type', 'line');
-                % line_plot.XData = app.val_1(app.ftr, :);
-                % line_plot.YData = app.val_2(app.ftr, :);
+                line_plot = findobj(fig, 'Type', 'line');
+                line_plot.XData = app.val_1(app.ftr, :);
+                line_plot.YData = app.val_2(app.ftr, :);
 
             case "figure_histogram"
                 fig = plot_histogram (app);
-                %hist_plot = findobj(fig, 'Type', 'histogram');
+                hist_plot = findobj(fig,)
                 
             case "figure_scatter"
                 fig = plot_scatter (app);
-                % scatter_plot = findobj(fig, 'Type', 'scatter');
-                % scatter_plot.CData = cdata;
-
-
+                sc_handle = findobj(fig, 'Type', 'scatter');
+                if ~isempty(sc_handle)
+                    sc_handle.CData = cdata;
+                end
             case "figure_render"
                 fig = render_localization (app);
-                %img_handle = findobj(fig, 'Type', 'image');
-        end
 
+        end
     end
 
         
-        %app.children_apps{i} = fig;
+        app.children_apps{i} = fig;
 
 
         % sc_handle = findobj(fig, 'Type', 'scatter');
@@ -69,8 +68,8 @@ function apply_filter_to_data (app)
         % 
         % app.val_hist = getHistPlotValue (app);
 
+
+    end
+
     % toc;
-
 end
-
-    

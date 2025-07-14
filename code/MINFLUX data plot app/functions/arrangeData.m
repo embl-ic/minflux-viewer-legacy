@@ -7,6 +7,19 @@ function arrangeData (app)
     
     parseAbberiorData (app);
     
+    % sort by trace ID
+    [tid_sorted, idx_sort] = sort(app.data.tid);
+    
+    attr_names = fieldnames(app.data);
+    for i = 1 : length(attr_names)
+        % check attr dimension
+        attrName = attr_names{i};
+        value = app.data.(attrName);
+        value = value(idx_sort);
+        app.data.(attrName) = value;
+    end
+
+
     % take only valid data
     take_valid = true;  
     if take_valid
@@ -25,8 +38,17 @@ function arrangeData (app)
         app.nLoc = sum(vld);
     end
     
-    % get trace ID, and nLoc per trace
+    % get trace ID, sort data by trace ID, and compute nLoc per trace
     if isfield(app.data, 'tid')
+        % names = fieldnames(app.data);
+        % for i = 1 : length(names)
+        %     if strcmp(names{i}, 'mbm')
+        %         continue;
+        %     end
+        %     data = app.data(names{i});
+        %     app.data(names{i}) = data(idx_sort); 
+        % end
+
         app.traceID = unique(app.data.tid);
         app.traceLength = arrayfun(@(x) sum(app.data.tid==x), app.traceID);
     end

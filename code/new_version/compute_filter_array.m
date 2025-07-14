@@ -1,23 +1,26 @@
-function ftr = compute_filter_array (app, row_data)
+function ftr = compute_filter_array (data, row_data)
 
     ftr = [];
-    if ~isprop(app, 'data') || isempty(app.data) || ~isfield(app.data, 'attr') || isempty(app.data.attr)
+    if isempty(data) || ~isfield(data, 'attr')
         return;
     end
+
+    %% here
+
     
-    if ~isfield(app.data.attr, 'ftr')
-        app.data.attr.ftr = true(app.data.prop.num_loc, 1);
+    if ~isfield(data.attr, 'ftr')
+        data.attr.ftr = true(data.prop.num_loc, 1);
     end
 
-    trace_idx = app.data.prop.trace_idx;
-    num_loc_per_trace = app.data.prop.num_loc_per_trace;
+    trace_idx = data.prop.trace_idx;
+    num_loc_per_trace = data.prop.num_loc_per_trace;
     %apply_filter = row_data{1};
     attr_name = row_data{2};
     var_type = row_data{3};
     min_value = row_data{4};
     max_value = row_data{5};
 
-    attr_value = app.data.attr.(attr_name);
+    attr_value = data.attr.(attr_name);
 
     switch var_type
         case "per loc"

@@ -1,23 +1,25 @@
 function fig_line = plot_attribute (app)
     
-
-    if isempty(app.data) || ~isfield(app.data, 'attr') || ~isfield(app.data, 'prop') || ~isfield(app.data.prop, 'attr_names')
+    % get active data from app
+    idx = get_active_data_index (app);
+    if isempty(idx)
         return;
     end
+    data = app.data{idx};
     
     
-    attr_names = app.data.prop.attr_names;
-    attrs = app.data.attr;
+    attr_names = data.prop.attr_names;
+    attrs = data.attr;
     ftr = attrs.ftr;
 
-    fig_name = strcat("Attribute Plot : ", app.data.file.name);
+    fig_name = strcat("Attribute Plot : ", data.file.name);
 
     fig_line = findall(0, 'Type', 'figure', 'Name', fig_name);
 
 
     if isempty(fig_line)
 
-        fig_line = uifigure('Name', fig_name, 'NumberTitle', 'off', 'Tag', "figure_attribute", "DeleteFcn", @delete_fig);
+        fig_line = uifigure('Name', fig_name, 'NumberTitle', 'off', 'Tag', "figure_attribute", "DeleteFcn", {@close_child_figure, app});
         ax = axes (fig_line);
         screenSize = groot().ScreenSize;
         fig_line.Position = [screenSize(3)*0.5-320, screenSize(4)*0.5-352, 640, 704];
@@ -105,24 +107,25 @@ function fig_line = plot_attribute (app)
     else
         
         line_plot = findobj(fig_line, 'Type', 'line');
+        ax_line = findobj(fig_line, 'Type', 'axes');
 
         attr_list_x = findobj(fig_line, 'Type', 'uidropdown', 'Tag', 'attr_x');
         attr_list_y = findobj(fig_line, 'Type', 'uidropdown', 'Tag', 'attr_y');
         attr_list_z = findobj(fig_line, 'Type', 'uidropdown', 'Tag', 'attr_z');
+        
+        line_xlim = ax_line.XLim;
+        line_ylim = ax_line.YLim;
+        line_zlim = ax_line.ZLim;
 
         line_plot.XData = attrs.(attr_list_x.Value)(ftr, :);
         line_plot.YData = attrs.(attr_list_y.Value)(ftr, :);
-        line_plot.ZData = attrs.(attr_list_x.Value)(ftr, :);
+        line_plot.ZData = attrs.(attr_list_z.Value)(ftr, :);
+
+        ax_line.XLim = line_xlim;
+        ax_line.YLim = line_ylim;
+        ax_line.ZLim = line_zlim;
 
     end
-
-
-    
-    function delete_fig (~, ~)
-        idx = find( cellfun(@(x) isequal(x, fig_line), app.children_apps) );
-        app.children_apps(idx) = [];
-    end
-
 
     function data_x_changed (~, ~)
         val_x = attrs.(attr_list_x.Value)(ftr, :);

@@ -1,9 +1,9 @@
-function size_bytes = get_size (app, this) 
-   props = properties(this); 
+function size_bytes = get_size (variable) 
+   props = properties(variable); 
    size_bytes = 0; 
    
    for ii=1:length(props) 
-      currentProperty = getfield(this, char(props(ii))); 
+      currentProperty = getfield(variable, char(props(ii))); 
       s = whos('currentProperty'); 
       size_bytes = size_bytes + s.bytes; 
    end

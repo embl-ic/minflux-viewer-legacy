@@ -8,9 +8,11 @@ function [valid, data] = validate_raw_data (app, folder, file_name)
     
 
     if ~exist(fullpath, 'file') % file does not exist.
-        warning("MINFLUX data loading error: file does not exist!");
-        return;
+        warning("MINFLUX data loading error: empty data!");
+      warningMessage = sprintf('Warning: file does not exist:\n%s', fullFileName);
+      uiwait(msgbox(warningMessage));
     end
+
 
     raw_data = load( fullpath );
     if isempty(raw_data)

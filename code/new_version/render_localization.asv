@@ -11,9 +11,6 @@ function fig_render = render_localization (app)
     end
     global data; %#ok<GVMIS>
     data = app.data{idx};
-    
-
-   
 
 
     % load data into appeter
@@ -133,7 +130,7 @@ function fig_render = render_localization (app)
     function config_calibration (~, ~)
         cali = data.calibration;
         xyz = data.prop.xyz;
-        param = data.render.param;
+        param = app.data.render.param;
 
         prompt = {'pixel size (nm):', 'voxel depth (znm):', 'z scale factor:', 'Gaussian sigma (xynm, znm):'};
         title = 'calibration value:';
@@ -158,11 +155,11 @@ function fig_render = render_localization (app)
         if (RIMF ~= cali.RIMF)
             xyz(:, 3) = xyz(:, 3) / cali.RIMF * RIMF;
             param.posZ = param.posZ / cali.RIMF * RIMF;
-            data.render.roi(:, 3) = data.render.roi(:, 3) / cali.RIMF * RIMF;
-            for i = 1 : length(data.render.images)
-                z_new = data.render.images(i).param.posZ / cali.RIMF * RIMF;
+            app.data.render.roi(:, 3) = app.data.render.roi(:, 3) / cali.RIMF * RIMF;
+            for i = 1 : length(app.data.render.images)
+                z_new = app.data.render.images(i).param.posZ / cali.RIMF * RIMF;
                 z_new = round( z_new * 10 ) / 10;
-                data.render.images(i).posZ = z_new;
+                app.data.render.images(i).posZ = z_new;
             end
             cali.RIMF = RIMF;
         end
@@ -188,15 +185,15 @@ function fig_render = render_localization (app)
         param.sigma_xy = cali.sigma(1);
         param.sigma_z = cali.sigma(2);
 
-        data.calibration = cali;
-        data.prop.xyz = xyz;
-        data.render.param = param;
+        app.data.calibration = cali;
+        app.data.prop.xyz = xyz;
+        app.data.render.param = param;
     end
 
 
     function config_channel (~, ~)
         disp("... getting dcr info. create channel configuration figure...");
-        dcr_all = data.channel.dcr(~isnan(data.channel.dcr));
+        dcr_all = app.data.channel.dcr(~isnan(app.data.channel.dcr));
         % create histogram, draw two color Box
         fig_dcr = figure('Name', 'dcr (all iter) histogram of data');
         cm_dcr = uicontextmenu(fig_dcr);
@@ -207,15 +204,15 @@ function fig_render = render_localization (app)
         set(ax_dcr, 'ContextMenu', cm_dcr);
         histogram(ax_dcr, dcr_all, 'Normalization', 'pdf');
         hold on;
-        data.channel.cut1 = max(0, ax_dcr.XLim(1)) + 0.01;
-        data.channel.cut2 = min(1, ax_dcr.XLim(2)) - 0.01;
-        data.channel.keep_ch3 = false;
-        data.channel.RGB = [1, 2, 3]; % default LUT is RGB for the 1st, 2nd and 3rd channels
-        cut1_line = images.roi.Rectangle(ax_dcr, 'Position', [0; 0; data.channel.cut1; ax_dcr.YLim(2)]', ...
+        app.data.channel.cut1 = max(0, ax_dcr.XLim(1)) + 0.01;
+        app.data.channel.cut2 = min(1, ax_dcr.XLim(2)) - 0.01;
+        app.data.channel.doCh3 = false;
+        app.data.channel.RGB = [1, 2, 3]; % default LUT is RGB for the 1st, 2nd and 3rd channels
+        cut1_line = images.roi.Rectangle(ax_dcr, 'Position', [0; 0; app.data.channel.cut1; ax_dcr.YLim(2)]', ...
             'Color', 'r', 'LineWidth', 0.1, 'FaceAlpha', 0.2, 'InteractionsAllowed', 'all', ...
             'Deletable', 0, 'ContextMenu', cm_dcr);
 
-        cut2_line = images.roi.Rectangle(ax_dcr, 'Position', [data.channel.cut2; 0; 1-data.channel.cut2; ax_dcr.YLim(2)]', ...
+        cut2_line = images.roi.Rectangle(ax_dcr, 'Position', [app.data.channel.cut2; 0; 1-app.data.channel.cut2; ax_dcr.YLim(2)]', ...
             'Color', 'g', 'LineWidth', 0.1, 'FaceAlpha', 0.2, 'InteractionsAllowed', 'all', ...
             'Deletable', 0, 'ContextMenu', cm_dcr);
         drawnow;
@@ -229,14 +226,14 @@ function fig_render = render_localization (app)
             id_c = find(x>mid, 1, 'first');
             half_sum = 2.5 - 0.5*y(id_c);
             ysum1 = arrayfun(@(i) sum(y(id_c-i:id_c-1)), 1:id_c-1 );
-            data.channel.cut1 = find(ysum1 >= half_sum, 1, 'first');
+            app.data.channel.cut1 = find(ysum1 >= half_sum, 1, 'first');
             ysum2 = arrayfun(@(i) sum(y(id_c+1:id_c+i)), 1:101-id_c );
-            data.channel.cut2 = find(ysum2 >= half_sum, 1, 'first');
-            data.channel.cut1 = (id_c - data.channel.cut1) / 100;
-            data.channel.cut2 = (id_c + data.channel.cut2) / 100;
+            app.data.channel.cut2 = find(ysum2 >= half_sum, 1, 'first');
+            app.data.channel.cut1 = (id_c - app.data.channel.cut1) / 100;
+            app.data.channel.cut2 = (id_c + app.data.channel.cut2) / 100;
             plot(x, y, 'r-');
-            set(cut1_line, 'Position', [0; 0; data.channel.cut1; ax_dcr.YLim(2)]');
-            set(cut2_line, 'Position', [data.channel.cut2; 0; 1-data.channel.cut2; ax_dcr.YLim(2)]');
+            set(cut1_line, 'Position', [0; 0; app.data.channel.cut1; ax_dcr.YLim(2)]');
+            set(cut2_line, 'Position', [app.data.channel.cut2; 0; 1-app.data.channel.cut2; ax_dcr.YLim(2)]');
         else
             disp("... dcr distribution cannot be used to separate channels!"); 
         end
@@ -261,16 +258,16 @@ function fig_render = render_localization (app)
             uicontrol('Parent',d, 'Style','text', 'Position',[0 70 55 15],...
                    'String', 'Value:', 'FontWeight', 'bold');
             do_ch3 = uicontrol('Parent',d, 'Style','checkbox', 'Position',[10 45 200 15],...
-                   'String', 'keep middle portion in 3rd channel', 'Value', data.channel.keep_ch3 );
+                   'String', 'keep middle portion in 3rd channel', 'Value', app.data.channel.doCh3 );
             uicontrol('Parent',d, 'Position',[100 10 55 25],'String','OK', 'Callback', @finish);
 
             uiwait(d);
             function finish (~, ~)
-                data.channel.cut1 = str2double(value1.String);
-                data.channel.cut2 = str2double(value2.String);
-                set(cut1_line, 'Color', color1.String{color1.Value}, 'Position', [0; 0; data.channel.cut1; ax_dcr.YLim(2)]');
-                set(cut2_line, 'Color', color2.String{color2.Value}, 'Position', [data.channel.cut2; 0; 1-data.channel.cut2; ax_dcr.YLim(2)]');
-                data.channel.keep_ch3 = do_ch3.Value;
+                app.data.channel.cut1 = str2double(value1.String);
+                app.data.channel.cut2 = str2double(value2.String);
+                set(cut1_line, 'Color', color1.String{color1.Value}, 'Position', [0; 0; app.data.channel.cut1; ax_dcr.YLim(2)]');
+                set(cut2_line, 'Color', color2.String{color2.Value}, 'Position', [app.data.channel.cut2; 0; 1-app.data.channel.cut2; ax_dcr.YLim(2)]');
+                app.data.channel.doCh3 = do_ch3.Value;
                 %delete(d);
             end
         end
@@ -287,17 +284,17 @@ function fig_render = render_localization (app)
         end
 
         function apply_channel ( on_trace )
-            data.channel.do_trace = on_trace;
-            data.channel.doChannel = true;
-            data.channel.cut1 = cut1_line.Position(1) + cut1_line.Position(3);
-            data.channel.cut2 = cut2_line.Position(1);
-            if data.channel.keep_ch3
+            app.data.channel.do_trace = on_trace;
+            app.data.channel.doChannel = true;
+            app.data.channel.cut1 = cut1_line.Position(1) + cut1_line.Position(3);
+            app.data.channel.cut2 = cut2_line.Position(1);
+            if app.data.channel.doCh3
                 app.numC = 3;
             else
                 app.numC = 2;
             end
-            data.channel.RGB(1) = find(cut1_line.Color);
-            data.channel.RGB(2) = find(cut2_line.Color);
+            app.data.channel.RGB(1) = find(cut1_line.Color);
+            app.data.channel.RGB(2) = find(cut2_line.Color);
             img = find_image ();
             set(image_handle, 'cdata', img);
             auto_lut (image_handle);
@@ -308,12 +305,12 @@ function fig_render = render_localization (app)
 
     function apply_gaussian (~, ~)
         % apply 2D or 3D Gaussian to histogram rendered image
-        sigma = data.calibration.sigma;
+        sigma = app.data.calibration.sigma;
         if sigma(1) == 0
             return;
         end
 
-        data.render.param.do_smooth = ~data.render.param.do_smooth;
+        app.data.render.param.do_smooth = ~app.data.render.param.do_smooth;
 
         img = find_image ();
         set(image_handle, 'cdata', img);
@@ -323,16 +320,16 @@ function fig_render = render_localization (app)
 
 
     function create_ortho_views (~, ~)
-        if data.prop.num_dim == 2
+        if app.data.prop.num_dim == 2
             return;
         end
-        x = data.prop.xyz(:, 1); y = data.prop.xyz(:, 2); z = data.prop.xyz(:, 3);
-        xedge = min(x) : data.calibration.pixel_size : max(x) + data.calibration.pixel_size;
-        yedge = min(y) : data.calibration.pixel_size : max(y) + data.calibration.pixel_size;
-        zedge = min(z) : data.calibration.voxel_depth : max(z) + data.calibration.voxel_depth;
+        x = app.data.prop.xyz(:, 1); y = app.data.prop.xyz(:, 2); z = app.data.prop.xyz(:, 3);
+        xedge = min(x) : app.data.calibration.pixel_size : max(x) + app.data.calibration.pixel_size;
+        yedge = min(y) : app.data.calibration.pixel_size : max(y) + app.data.calibration.pixel_size;
+        zedge = min(z) : app.data.calibration.voxel_depth : max(z) + app.data.calibration.voxel_depth;
         numX = length(xedge) - 1; numY = length(yedge) - 1 ; numZ = length(zedge) - 1;
 
-        if data.channel.doChannel
+        if app.data.channel.doChannel
             ch_idx = getChannelIdx (true);
             counts_xy = zeros( [numX, numY, 3] );
             counts_xz = zeros( [numX, numZ, 3] );
@@ -352,8 +349,8 @@ function fig_render = render_localization (app)
         end
         
         fig_xy = figure('Name', 'XY view', 'NumberTitle', 'off', 'CloseRequestFcn', @close_all);
-        if app.doSmooth && data.calibration.sigma(1) > 0
-            sigmaXY = data.calibration.sigma(1) / data.calibration.pixel_size;
+        if app.doSmooth && app.data.calibration.sigma(1) > 0
+            sigmaXY = app.data.calibration.sigma(1) / app.data.calibration.pixel_size;
             auto_lut( imshow(imgaussfilt(counts_xy, [sigmaXY, sigmaXY]), 'parent', axes(fig_xy)) );
         else
             auto_lut( imshow(counts_xy, 'parent', axes(fig_xy)) );
@@ -369,8 +366,8 @@ function fig_render = render_localization (app)
         fig_zy = figure('Name', 'ZY view', 'NumberTitle', 'off', 'Position', [pos_xy(1), pos_xy(2)-200, pos_xy(3), width_z], 'CloseRequestFcn',@close_all);
         
         
-        if app.doSmooth && data.calibration.sigma(2) > 0
-            sigmaZ = data.calibration.sigma(2) / data.calibration.voxel_depth;
+        if app.doSmooth && app.data.calibration.sigma(2) > 0
+            sigmaZ = app.data.calibration.sigma(2) / app.data.calibration.voxel_depth;
             auto_lut( imshow(imgaussfilt(counts_xz, [sigmaXY, sigmaZ]), 'parent', axes(fig_xz)) );
             auto_lut( imshow(imgaussfilt(counts_zy, [sigmaZ, sigmaXY]), 'parent', axes(fig_zy)) );
         else
@@ -390,27 +387,27 @@ function fig_render = render_localization (app)
     
     function draw_roi (~, ~)
         roi = app.roi;
-        roi(:, 3) = roi(:, 3) - min(data.prop.xyz(:, 3)); % ROI Z coordinate to figure coordinates minZ : maxZ to 0 : rangeZ
-        px = data.calibration.pixel_size; vx = data.calibration.voxel_depth;
-        if roi(1, 1) == min( data.prop.xyz(:, 1) )
+        roi(:, 3) = roi(:, 3) - min(app.data.prop.xyz(:, 3)); % ROI Z coordinate to figure coordinates minZ : maxZ to 0 : rangeZ
+        px = app.data.calibration.pixel_size; vx = app.data.calibration.voxel_depth;
+        if roi(1, 1) == min( app.data.prop.xyz(:, 1) )
             xMin = range(ax.YLim) * 0.05 + ax.YLim(1); 
         else
             xMin = roi(1, 1) / px;
         end
 
-        if roi(1, 2) == min( data.prop.xyz(:, 2) )
+        if roi(1, 2) == min( app.data.prop.xyz(:, 2) )
             yMin = range(ax.XLim) * 0.05 + ax.XLim(1); 
         else
             yMin = roi(1, 2) / px;
         end
 
-        if roi(2, 1) == max( data.prop.xyz(:, 1) )
+        if roi(2, 1) == max( app.data.prop.xyz(:, 1) )
             xMax = range(ax.YLim) * 0.95 + ax.YLim(1); 
         else
             xMax = roi(2, 1) / px;
         end
 
-        if roi(2, 2) == max( data.prop.xyz(:, 2) )
+        if roi(2, 2) == max( app.data.prop.xyz(:, 2) )
             yMax = range(ax.XLim) * 0.95 + ax.XLim(1); 
         else
             yMax = roi(2, 2) / px;
@@ -418,7 +415,7 @@ function fig_render = render_localization (app)
         
         zMin = 0; zMax = 0;     % z min and max in figure coordinate
 
-        if data.prop.num_dim == 2     % 2D case
+        if app.data.prop.num_dim == 2     % 2D case
             roi_xy = images.roi.Rectangle(ax, 'Color', 'y', 'LineWidth', 0.1, 'Position', [yMin; xMin; yMax-yMin; xMax-xMin]');
             fig_xy = fig_render;
         else
@@ -436,13 +433,13 @@ function fig_render = render_localization (app)
             ax_zy = get(fig_zy,'Children');
             
             ZLim = min( range(ax_xz.XLim), range(ax_zy.YLim) );   % get Z axis size
-            if roi(1, 3) == 0   %min( data.prop.xyz(:, 3) )
+            if roi(1, 3) == 0   %min( app.data.prop.xyz(:, 3) )
                 zMin = ZLim * 0.25 + 0.5; 
             else
                 zMin = roi(1, 3) / vx;
             end
     
-            if roi(2, 3) == range( data.prop.xyz(:, 3) )
+            if roi(2, 3) == range( app.data.prop.xyz(:, 3) )
                 zMax = ZLim * 0.75 + 0.5; 
             else
                 zMax = roi(2, 3) / vx;
@@ -481,7 +478,7 @@ function fig_render = render_localization (app)
             end
             %app.roi = [xMin, yMin, zMin; xMax, yMax, zMax];
 
-            if any(data.prop.xyz(:,3) ~= 0)
+            if any(app.data.prop.xyz(:,3) ~= 0)
                 roi_xy.Position = [yMin; xMin; yMax-yMin; xMax-xMin]';
                 roi_xz.Position = [zMin; xMin; zMax-zMin; xMax-xMin]';
                 roi_zy.Position = [yMin; zMin; yMax-yMin; zMax-zMin]';
@@ -496,12 +493,12 @@ function fig_render = render_localization (app)
         
         function remove_roi (~, ~)
             delete(roi_xy);
-            app.roi = [min(data.prop.xyz); max(data.prop.xyz)];
+            app.roi = [min(app.data.prop.xyz); max(app.data.prop.xyz)];
         end
 
         function apply_roi (~, ~)
             app.roi = [xMin*px, yMin*px, zMin*vx; xMax*px, yMax*px, zMax*vx];
-            app.roi(:, 3) = app.roi(:, 3) + min(data.prop.xyz(:, 3));   % apply the z offset
+            app.roi(:, 3) = app.roi(:, 3) + min(app.data.prop.xyz(:, 3));   % apply the z offset
             delete(roi_xy);
         end
 
@@ -525,26 +522,26 @@ function fig_render = render_localization (app)
         end
 
         % calculate render image dimensions
-        xedge = app.roi(1, 1) : data.calibration.pixel_size  : app.roi(2, 1) + data.calibration.pixel_size;
-        yedge = app.roi(1, 2) : data.calibration.pixel_size  : app.roi(2, 2) + data.calibration.pixel_size;
-        zedge = app.roi(1, 3) : data.calibration.voxel_depth : app.roi(2, 3) + data.calibration.voxel_depth;
+        xedge = app.roi(1, 1) : app.data.calibration.pixel_size  : app.roi(2, 1) + app.data.calibration.pixel_size;
+        yedge = app.roi(1, 2) : app.data.calibration.pixel_size  : app.roi(2, 2) + app.data.calibration.pixel_size;
+        zedge = app.roi(1, 3) : app.data.calibration.voxel_depth : app.roi(2, 3) + app.data.calibration.voxel_depth;
         
         % call write to TIFF function
         success = false;
 
-        if data.channel.doChannel
+        if app.data.channel.doChannel
             ch_idx = getChannelIdx (false);
             for c = 1 : 3
                 pathSave = fullfile(tif_dir, strcat(tif_name(1 : end-5), "_C", num2str(c), ".tiff"));
-                success = render_to_tiff_file (data.prop.xyz, xedge, yedge, zedge, pathSave, ch_idx(:, c))  || success;
+                success = render_to_tiff_file (app.data.prop.xyz, xedge, yedge, zedge, pathSave, ch_idx(:, c))  || success;
             end
         else    % no channel separation
             pathSave = fullfile(tif_dir, tif_name);
-            success = render_to_tiff_file (data.prop.xyz, xedge, yedge, zedge, pathSave);
+            success = render_to_tiff_file (app.data.prop.xyz, xedge, yedge, zedge, pathSave);
         end
 
         if success
-            if data.channel.doChannel
+            if app.data.channel.doChannel
                 pathSave = extractBefore(pathSave, '_C') + "_C{i}.tiff";
             end
             
@@ -593,17 +590,6 @@ function fig_render = render_localization (app)
 
 %% member functions
     function load_data ()
-        % xyz coordinates, in nanometer, and Z scaling corrected
-        xyz = 1e9 * [data.attr.loc_x, data.attr.loc_y, data.attr.loc_z];
-    
-        data.prop.origin = min ( xyz );
-        xyz = xyz - data.prop.origin;           % re-zero XYZ coordinates to axis origin
-        xyz(:, 3) = xyz(:, 3) - mean( xyz(:, 3) );  % move Z=0 at the middle of the data volume
-    
-        data.prop.xyz = single( round(xyz, 2) ); % convert to single precision, and 0.01 nm resolution
-
-
-
         % calculation of Localization Precision, do not apply Gaussian filter by default
         if ~isfield(data, 'calibration')
             data.calibration = struct;
@@ -807,7 +793,7 @@ function fig_render = render_localization (app)
             ch_idx(:, 1) = dcr >= 0 & dcr < data.channel.cut1;   % 1st channel
             ch_idx(:, 2) = dcr >= data.channel.cut2 & dcr <= 1;  % 1st channel
         end
-        if data.channel.keep_ch3
+        if data.channel.doCh3
             ch_idx(:, 3) = dcr >= data.channel.cut1 & dcr < data.channel.cut2;  %B
         end
     end
