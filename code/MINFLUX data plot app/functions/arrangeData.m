@@ -8,19 +8,19 @@ function arrangeData (app)
     parseAbberiorData (app);
     
     % sort by trace ID
-    [tid_sorted, idx_sort] = sort(app.data.tid);
-    
-    attr_names = fieldnames(app.data);
-    for i = 1 : length(attr_names)
-        % check attr dimension
-        attrName = attr_names{i};
-        value = app.data.(attrName);
-        value = value(idx_sort);
-        app.data.(attrName) = value;
-    end
+    % [tid_sorted, idx_sort] = sort(app.data.tid);
+    % 
+    % attr_names = fieldnames(app.data);
+    % for i = 1 : length(attr_names)
+    %     % check attr dimension
+    %     attrName = attr_names{i};
+    %     value = app.data.(attrName);
+    %     value = value(idx_sort);
+    %     app.data.(attrName) = value;
+    % end
 
 
-    % take only valid data
+    % take only valid data (moved into parseAbberiorData.m)
     take_valid = true;  
     if take_valid
         vld = true(app.nLoc, 1);

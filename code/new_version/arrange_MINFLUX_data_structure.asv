@@ -46,25 +46,41 @@ function [raw_data, attributes, num_loc, num_itr] = arrange_MINFLUX_data_structu
     attr_names = fieldnames(attributes);
 
     % get N(loc) and N(itr)
+
+    % itr, num_loc, num_itr, vld, 
     itr = attributes.itr;
     [num_loc, num_itr] = size(itr);
-    vld = true(num_loc, 1);
-    if isfield(attributes, 'vld')
-        vld = attributes.vld;
-    end
+
+    %if any(itr~=(itr(1))) % m2410 new data format
+
+        %end
+
+
     % arrange format and dimension of nLoc and nItr
     if num_loc == 1
         num_loc = num_itr;    % swap to get the correct number of localizations
         itr = itr';
         if num_loc == 1    % data with only 1 localization, invalid
-            errordlg('Data has only 1 localization data point, abort import!', 'Wrong format!');
+            errordlg('MINFLUX data appear to have only 1 localization data point, abort import!', 'Wrong format!');
             %warning("MINFLUX data appear to have only 1 localization data point, abort import!")
             attributes = [];
             return
         end
+        
         num_itr = 1;       % only 1 iteration
     end
-    if num_itr == 
+
+    if num_itr == 1 && all(itr==(itr(1)))
+        warning('off', 'backtrace');
+        warning("MINFLUX data appear to have only 1 iteration!");
+        warning('on', 'backtrace');
+    end
+
+    vld = true(num_loc, 1);
+    if isfield(attributes, 'vld')
+        vld = attributes.vld;
+    end
+
     num_loc = size(attributes.loc(vld, :), 1); % only load valid data into app.data
 
 
@@ -93,13 +109,14 @@ function [raw_data, attributes, num_loc, num_itr] = arrange_MINFLUX_data_structu
 
         % separate localization related attribute that has 3 dimensions to _x, _y, _z attribute,
         % always take last iteration value regardless preference setup
-        if ndims(value) == 3   % loc, lnc, ext
+        if any(matches(attrName, ["loc", "lnc", "ext"]))   %ndims(value) == 3   % loc, lnc, ext
             attributes = rmfield(attributes, attrName); % remove original xyz attribute
             attributes.([attrName, '_x']) = squeeze(value(vld, iter_first : iter_last, 1));
             attributes.([attrName, '_y']) = squeeze(value(vld, iter_first : iter_last, 2));
             attributes.([attrName, '_z']) = squeeze(value(vld, iter_first : iter_last, 3));
             continue;
         end
+
         
         if ~load_all_iteration
             if load_effective_cfr && ( strcmp(attrName, 'cfr') || strcmp(attrName, 'efc') ) % check which iteration 'cfr' and 'efc' store reasonable values
@@ -127,3 +144,19 @@ function [raw_data, attributes, num_loc, num_itr] = arrange_MINFLUX_data_structu
 
 
 end
+
+
+%TODO: just switch case to different .mat version of minflux raw data:
+%   1: m2205: 
+%       1, 15 fields nested within itr:
+%       2, data shape: 1xN; Nx
+%   2: m2410: 
+%       1, no nested field;
+%       2, itr contains all iteration in order: 0, 1, 2, 3...
+%       3, data shape 1xN, Nx3 (loc, lnc), Nx2 or Nx1 (dcr)
+%   3: m2410
+%   4: m2205-ries
+%   5: m2205-huang
+%   6: m2410-huang
+%
+%

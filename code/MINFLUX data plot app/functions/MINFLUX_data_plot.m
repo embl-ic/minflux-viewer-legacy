@@ -56,7 +56,9 @@ classdef MINFLUX_data_plot < matlab.apps.AppBase
         reverseFilterButton         matlab.ui.control.Button
         UIAxes_histogram            matlab.ui.control.UIAxes
         TraceViewTab                matlab.ui.container.Tab
+        RenderViewTab               matlab.ui.container.Tab
         Image2                      matlab.ui.control.Image
+        Image3                      matlab.ui.control.Image
     end
 
     % Properties that correspond to apps with auto-reflow
@@ -1140,14 +1142,14 @@ classdef MINFLUX_data_plot < matlab.apps.AppBase
             vld_new(idx) = true;
             data_ori.vld = vld_new;
             
-            zscale = app.zscaleEditField.Value;
-            if isfield(data_ori, 'loc')
-                data_ori.loc(:, :, 3) = data_ori.loc(:, :, 3) * zscale;
-            elseif isfield(data_ori.itr, 'loc')
-                data_ori.itr.loc(:, :, 3) = data_ori.itr.loc(:, :, 3) * zscale;
-            else % no 'loc' detected!
-                % warning(' loc attribute not found in data! ');
-            end
+            % zscale = app.zscaleEditField.Value;
+            % if isfield(data_ori, 'loc')
+            %     data_ori.loc(:, :, 3) = data_ori.loc(:, :, 3) * zscale;
+            % elseif isfield(data_ori.itr, 'loc')
+            %     data_ori.itr.loc(:, :, 3) = data_ori.itr.loc(:, :, 3) * zscale;
+            % else % no 'loc' detected!
+            %     % warning(' loc attribute not found in data! ');
+            % end
 
             save(fullfile(save_path, save_file), '-struct', 'data_ori', '-v7.3');
 
@@ -1377,6 +1379,14 @@ classdef MINFLUX_data_plot < matlab.apps.AppBase
                 return;
             end
             app.TraceViewerApp = MINFLUX_data_plot_trace_viewer(app);
+        end
+        
+        % Image clicked function: Image2
+        function Image3Clicked(app, event)
+            if isempty(app.data)
+                return;
+            end
+            interactive_render_MINFLUX(app);
         end
 
         % Value changed function: histAttributeDropDown_4
@@ -1840,6 +1850,19 @@ classdef MINFLUX_data_plot < matlab.apps.AppBase
             app.Image2.ImageClickedFcn = createCallbackFcn(app, @Image2Clicked, true);
             app.Image2.Position = [395 387 230 235];
             app.Image2.ImageSource = 'image_2.png';
+            
+            
+            % Create RenderViewTab
+            app.RenderViewTab = uitab(app.TabGroup);
+            app.RenderViewTab.Title = 'Render';
+            
+            % Create Image3
+            app.Image3 = uiimage(app.RenderViewTab);
+            app.Image3.ScaleMethod = 'stretch';
+            app.Image3.ImageClickedFcn = createCallbackFcn(app, @Image3Clicked, true);
+            app.Image3.Position = [100 100 384 384];
+            app.Image3.ImageSource = 'image_3.png';
+
 
             % Show the figure after all components are created
             app.UIFigureMain.Visible = 'on';

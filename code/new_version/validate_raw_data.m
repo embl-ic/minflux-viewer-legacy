@@ -38,7 +38,7 @@ function [valid, data] = validate_raw_data (app, folder, file_name)
     % parse, sort and store MINFLUX data attributes and property, udpate
     % raw data to account for early Abberrior format that value wrapped in itr
     property = struct;
-    [file.raw_data, attributes, property.num_loc, property.num_itr] = arrange_MINFLUX_data_structure (raw_data, load_all_iteration, load_effective_cfr);
+    [file.raw_data, attributes, property.num_loc, property.num_itr] = arrange_MINFLUX_data_structure (raw_data, load_all_iteration, load_effective_cfr);   % !!! HERE
     if isempty(attributes)
         return;
     end
