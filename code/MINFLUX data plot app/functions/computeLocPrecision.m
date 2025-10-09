@@ -39,7 +39,7 @@
             % plot localization precision in a separate figure window
             figure('Name', strcat(app.file, ' - Localization Precision')); % create new figure for the plots
             ax_x = subplot(app.nDim-1, 3, 1);
-            sigma_x = 1e9* std_dist_x;
+            sigma_x = std_dist_x;
             median_sig_x = median(sigma_x);
             histogram(ax_x, sigma_x);
             line(ax_x, [median_sig_x, median_sig_x], ylim, 'LineWidth', 1, 'Color', 'r', 'LineStyle', '--');
@@ -47,7 +47,7 @@
             xlabel(ax_x, 'σ_{x}(nm)');
             
             ax_y = subplot(app.nDim-1, 3, 2);
-            sigma_y = 1e9* std_dist_y;
+            sigma_y = std_dist_y;
             median_sig_y = median(sigma_y);
             histogram(ax_y, sigma_y);
             line(ax_y, [median_sig_y, median_sig_y], ylim, 'LineWidth', 1, 'Color', 'r', 'LineStyle', '--');
@@ -58,7 +58,7 @@
                 ax_xy = subplot(2, 3, 4);
                 
                 ax_z = subplot(2, 3, 3);
-                sigma_z = 1e9* std_dist_z;
+                sigma_z = std_dist_z;
                 median_sig_z = median(sigma_z);
                 histogram(ax_z, sigma_z);
                 line(ax_z, [median_sig_z, median_sig_z], ylim, 'LineWidth', 1, 'Color', 'r', 'LineStyle', '--');
@@ -66,7 +66,7 @@
                 xlabel(ax_z, 'σ_{z}(nm)');
 
                 ax_xyz = subplot(2, 3, [5, 6]);
-                sigma_xyz = 1e9* std_dist_xyz;
+                sigma_xyz = std_dist_xyz;
                 median_sig_xyz = median(sigma_xyz);
                 histogram(ax_xyz, sigma_xyz);
                 line(ax_xyz, [median_sig_xyz, median_sig_xyz], ylim, 'LineWidth', 1, 'Color', 'r', 'LineStyle', '--');
@@ -76,7 +76,7 @@
                 ax_xy = subplot(1, 3, 3);
             end
 
-            sigma_xy = 1e9* std_dist_xy;
+            sigma_xy = std_dist_xy;
             median_sig_xy = median(sigma_xy);
             histogram(ax_xy, sigma_xy);
             line(ax_xy, [median_sig_xy, median_sig_xy], ylim, 'LineWidth', 1, 'Color', 'r', 'LineStyle', '--');
