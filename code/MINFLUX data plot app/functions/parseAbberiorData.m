@@ -53,7 +53,7 @@ function parseAbberiorData (app)
         return; 
     end
     take = itr == nItr-1;       % prepare to extract only value from last iteration
-    nLoc = sum(take);           % number of localizations (include invalid ones)
+    nLoc = sum(take(:));           % number of localizations (include invalid ones)
     if (nLoc < minLocNum) 
         return; 
     end
@@ -126,9 +126,9 @@ function parseAbberiorData (app)
                 end
 
             elseif any(matches( attrName, ["cfr", "efc"] )) % cfr and efc value might not be in the last iteration for m2205
-                [~, itr_effective] = max(nansum(attrValue{i}));   %#ok<NANSUM>
+                [~, itr_effective] = max(nansum(attrValue));   %#ok<NANSUM>
                 attrValue = attrValue(:, itr_effective);
-                fprintf('reading %s from %d / %d iteration.\n', attrName, idx, nItr);
+                fprintf('reading %s from %d / %d iteration.\n', attrName, itr_effective, nItr);
             else
                 attrValue = attrValue(:, end);
             end
