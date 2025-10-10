@@ -1,0 +1,16 @@
+function check3D (app)
+    app.nDim = 0;
+    if (isempty(app.data.loc_x))
+        return;
+    end
+    
+    if iqr(app.data.loc_z, 'all') < 1e-10    % if the 25%-75% interquantile range of Z axis value is less than 0.1 nm, consider the data as 2D
+
+    end
+
+    if (all(app.data.loc_z==0))
+        app.nDim = 2;
+    else
+        app.nDim = 3;
+    end
+end
