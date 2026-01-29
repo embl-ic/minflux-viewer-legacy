@@ -1019,13 +1019,15 @@ classdef MINFLUX_data_plot < matlab.apps.AppBase
 	        % get attribute value for overview plot
             app.val_1 = getAttrValue(app, app.attributeDropDown_2.Value);
             app.val_2 = getAttrValue(app, app.attributeDropDown_1.Value);
-            
+            app.val_hist = getHistPlotValue(app);
             
 	        % estimate localization precision, pixel size,
 
             % update main and scatter plot
             updateMainPlot(app);
+            updateHistPlot(app);
             updateScatterPlot(app);
+
             app.index_roi = false(app.nLoc, 1);
         end
 
@@ -1312,7 +1314,7 @@ classdef MINFLUX_data_plot < matlab.apps.AppBase
         function zscaleEditFieldValueChanged(app, event)
             app.zScale = app.zscaleEditField.Value;
             app.zScaleAutoCheckBox.Value = false;     % not neccessary
-            app.xyz(:, 3) = app.data.loc_z * app.zScale;
+            app.xyz = 1e9 * [app.data.loc_x, app.data.loc_y, app.data.loc_z * app.zScale];
             app.data.znm = app.data.loc_z * app.zScale * 1e9;
 
             try
@@ -1341,7 +1343,7 @@ classdef MINFLUX_data_plot < matlab.apps.AppBase
                 app.zScale = 1;
             end
             app.zscaleEditField.Value = app.zScale;
-            app.xyz(:, 3) = app.data.loc_z * app.zScale;
+            app.xyz = 1e9 * [app.data.loc_x, app.data.loc_y, app.data.loc_z * app.zScale];
             app.data.znm = app.data.loc_z * app.zScale * 1e9;
             try
                 app.scatterPlot.ZData = app.data.znm( app.ftr );
@@ -1398,11 +1400,12 @@ classdef MINFLUX_data_plot < matlab.apps.AppBase
         % Value changed function: plotVarDropDown
         function plotVarDropDownValueChanged(app, event)
             app.val_hist = getHistPlotValue(app); 
-            xlabel(app.UIAxes_histogram, strcat(app.histAttributeDropDown_4.Value, {' : '}, app.plotVarDropDown.Value));
-            if ~isempty(app.val_hist) && isgraphics(app.histPlot)
-                app.histPlot.Data = app.val_hist;
-                app.binsizeSpinner.Value = app.histPlot.BinWidth;
-            end
+            % xlabel(app.UIAxes_histogram, strcat(app.histAttributeDropDown_4.Value, {' : '}, app.plotVarDropDown.Value));
+            % if ~isempty(app.val_hist) && isgraphics(app.histPlot)
+            %     app.histPlot.Data = app.val_hist;
+            %     app.binsizeSpinner.Value = app.histPlot.BinWidth;
+            % end
+            updateHistPlot(app);   % let it reset min/max, binning, etc.
         end
 
         % Value changing function: binsizeSpinner

@@ -5,10 +5,10 @@ function addExtraAttr (app)
     %app.data.itr = int8(1 + app.data.itr(app.data.vld, :));
     app.data.itr = int8(1 + app.data.itr);
 
-    % add xnm, ynm, and znm
+    % keep x/y in nm, but z must include zScale
     app.data.xnm = app.data.loc_x * 1e9;
     app.data.ynm = app.data.loc_y * 1e9;
-    app.data.znm = app.data.loc_z * 1e9;
+    app.data.znm = app.data.loc_z * app.zScale * 1e9;
 
     % locate trace change index in raw data
     tim = app.data.tim;
@@ -31,8 +31,10 @@ function addExtraAttr (app)
     %t_diff = tim - t_min;
     %app.data.ttz = t_diff ./ (t_max-t_min);
     
+    
+    % use zScale also for distances/speeds (still in meters here)
+    loc = [app.data.loc_x, app.data.loc_y, app.data.loc_z * app.zScale];
     % add travel distance, and instaneous speed attribute
-    loc = [app.data.loc_x, app.data.loc_y, app.data.loc_z];
     app.data.dst = [0; vecnorm(diff(loc), 2, 2)];
     app.data.dst(idx+1) = 0;
     app.data.spd = app.data.dst ./ dt;

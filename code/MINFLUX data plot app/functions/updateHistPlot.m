@@ -43,12 +43,14 @@ function updateHistPlot (app, minVal, maxVal)
     if ~isempty(app.hist_minLine)
         app.hist_minLine.Value = minVal;
     else
-        app.hist_minLine = xline(app.UIAxes_histogram, minVal, 'LineWidth', 2, 'Color', 'red', 'buttonDownFcn', @startDragFcn);
+        %app.hist_minLine = xline(app.UIAxes_histogram, minVal, 'LineWidth', 2, 'Color', 'red', 'buttonDownFcn', @startDragFcn);
+        app.hist_minLine = xline(app.UIAxes_histogram, minVal, 'LineWidth', 2, 'Color', 'red', 'ButtonDownFcn', @startDragFcn);
     end
     if ~isempty(app.hist_maxLine)
         app.hist_maxLine.Value = maxVal;
     else
-        app.hist_maxLine = xline(app.UIAxes_histogram, maxVal, 'LineWidth', 2, 'Color', 'red', 'buttonDownFcn', @startDragFcn);
+        %app.hist_maxLine = xline(app.UIAxes_histogram, maxVal, 'LineWidth', 2, 'Color', 'red', 'buttonDownFcn', @startDragFcn);
+        app.hist_maxLine = xline(app.UIAxes_histogram, maxVal, 'LineWidth', 2, 'Color', 'red', 'ButtonDownFcn', @startDragFcn);
     end
 
     function startDragFcn(src, ~)

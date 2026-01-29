@@ -28,4 +28,23 @@ function resetData (app)
     %delete(app.histPlot_roi_box);
     %delete(app.scatterPlot_roi);
     %end
+
+
+
+    % clear histogram visuals so next dataset starts clean
+    try
+        if ~isempty(app.histPlot) && isgraphics(app.histPlot), delete(app.histPlot); end
+        app.histPlot = [];
+        if ~isempty(app.hist_minLine) && isgraphics(app.hist_minLine), delete(app.hist_minLine); end
+        app.hist_minLine = [];
+        if ~isempty(app.hist_maxLine) && isgraphics(app.hist_maxLine), delete(app.hist_maxLine); end
+        app.hist_maxLine = [];
+        if ~isempty(app.histPlot_roi) && isgraphics(app.histPlot_roi), delete(app.histPlot_roi); end
+        app.histPlot_roi = [];
+        if ~isempty(app.histPlot_roi_box) && isgraphics(app.histPlot_roi_box), delete(app.histPlot_roi_box); end
+        app.histPlot_roi_box = [];
+        cla(app.UIAxes_histogram);
+    catch
+    end
+    
 end

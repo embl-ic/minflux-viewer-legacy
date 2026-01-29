@@ -78,8 +78,8 @@ classdef MINFLUX_data_plot_trace_viewer < matlab.apps.AppBase
         
         function initData (app)
             app.data = getData(app.CallingApp);    % load main app data
-            app.xyz = 1e9 * getLoc(app.CallingApp);      % load localization (after Z correction)
-            
+            %app.xyz = 1e9 * getLoc(app.CallingApp);      % load localization (after Z correction)
+            app.xyz = getLoc(app.CallingApp);   % already in nm
             app.tid = app.data.tid;
             
             initData2(app);
